@@ -203,7 +203,7 @@ def get_logger():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    fh = logging.FileHandler("../logs.log", encoding='utf-8')
+    fh = logging.FileHandler("logs.log", encoding='utf-8')
     fmt = '%(asctime)s - %(threadName)s - %(levelname)s - %(message)s'
     formatter = logging.Formatter(fmt)
     fh.setFormatter(formatter)
@@ -241,6 +241,7 @@ cardHolders = ['me', 'mom', 'almir']
 workTypes = ['all', 'contacts']
 if __name__ == "__main__":
     #Needed spread
+
     curSpread = int(input("ENTER SPREAD DIFFERENCE: "))
 
     #Card on which noney will come
@@ -263,7 +264,7 @@ if __name__ == "__main__":
     logger = get_logger()
     while True:
         try:
-            with open('../logs.log', 'w'): pass
+            with open('localbits\logs.log', 'w'): pass
             dashBoardSellerContacts = lclbit.sendRequest('/api/dashboard/seller/', '', 'get')['contact_list']
             checkDashboardForNewContacts(dashBoardSellerContacts, sberMessage, start=True)
             if workType == 'all': executeAll(workTime=80000, sberMsg=sberMessage, spreadDif=curSpread)

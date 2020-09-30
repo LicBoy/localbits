@@ -42,22 +42,19 @@ def checkForBankNamesRegularExpression(bank_name):
 
 #Get ads from online_buy category, U BUY HERE
 def getListOfBuyAds(myLimits):
-    req = requests.get(lclbit.baseurl + '/sell-bitcoins-online/ru/Russian_Federation/transfers-with-specific-bank/.json')
+    req = requests.get(lclbit.baseurl + '/sell-bitcoins-online/sberbank/.json')
     while int(req.status_code) != 200:
-        req = requests.get(lclbit.baseurl + '/sell-bitcoins-online/ru/Russian_Federation/transfers-with-specific-bank/.json')
+        req = requests.get(lclbit.baseurl + '/sell-bitcoins-online/sberbank/.json')
     ads = json.loads(req.text)['data']['ad_list']
     vals = []
     for ad in ads:
         ad = ad['data']
         if ad['min_amount'] is None or ad['max_amount'] is None:
             continue
-        bank_name = ad['bank_name'].upper()
-        # Check if bankName is Sberbank
-        goodBanksRegExp = checkForBankNamesRegularExpression(bank_name)
 
         #min_amount = float(ad['min_amount'])
         max_amount = float(ad['max_amount'])
-        if goodBanksRegExp and max_amount > myLimits[0]: #can be improved
+        if max_amount > myLimits[0]: #can be improved
             vals.append(ad)
     return vals
 
@@ -203,7 +200,7 @@ def get_logger():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    fh = logging.FileHandler("../logs.log", encoding='utf-8')
+    fh = logging.FileHandler("logs.log", encoding='utf-8')
     fmt = '%(asctime)s - %(threadName)s - %(levelname)s - %(message)s'
     formatter = logging.Formatter(fmt)
     fh.setFormatter(formatter)
@@ -263,7 +260,7 @@ if __name__ == "__main__":
     logger = get_logger()
     while True:
         try:
-            with open('../logs.log', 'w'): pass
+            with open('logs.log', 'w'): pass
             dashBoardSellerContacts = lclbit.sendRequest('/api/dashboard/seller/', '', 'get')['contact_list']
             checkDashboardForNewContacts(dashBoardSellerContacts, sberMessage, start=True)
             if workType == 'all': executeAll(workTime=80000, sberMsg=sberMessage, spreadDif=curSpread)
