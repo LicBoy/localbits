@@ -8,6 +8,7 @@ from datetime import datetime
 
 class LocalBitcoin:
     baseurl = 'https://localbitcoins.net'
+    nonce_prev = 0
 
     def __init__(self, hmac_auth_key, hmac_auth_secret, debug=False):
         self.hmac_auth_key = hmac_auth_key
@@ -70,11 +71,10 @@ class LocalBitcoin:
     """
 
     def contactRelease(self, contact_id):
-
         now = datetime.utcnow()
         epoch = datetime.utcfromtimestamp(0)
         delta = now - epoch
-        nonce = int(delta.total_seconds() * 1000)
+        nonce = int(delta.total_seconds())
 
         endpoint = '/api/contact_release/' + contact_id + '/'
         message = str(nonce) + self.hmac_auth_key + endpoint + ''
@@ -273,8 +273,7 @@ class LocalBitcoin:
     def getOwnAds(self):
         return self.sendRequest('/api/ads/', '', 'post')
 
-    def sendRequest(self, endpoint, params, method):
-
+    def sendRequest(self, endpoint, params, method):    #Base function
         params_encoded = ''
         if params != '':
             params_encoded = urllib.parse.urlencode(params)
@@ -284,7 +283,7 @@ class LocalBitcoin:
         now = datetime.utcnow()
         epoch = datetime.utcfromtimestamp(0)
         delta = now - epoch
-        nonce = int(delta.total_seconds() * 1000)
+        nonce = int(delta.total_seconds())
 
         message = str(nonce) + self.hmac_auth_key + endpoint + params_encoded
         message_bytes = message.encode('utf-8')
@@ -326,7 +325,7 @@ class LocalBitcoin:
                     now = datetime.utcnow()
                     epoch = datetime.utcfromtimestamp(0)
                     delta = now - epoch
-                    nonce = int(delta.total_seconds() * 1000)
+                    nonce = int(delta.total_seconds())
 
                     message = str(nonce) + self.hmac_auth_key + endpoint + params_encoded
                     message_bytes = message.encode('utf-8')
@@ -342,4 +341,6 @@ class LocalBitcoin:
                 print("JS is ready")
                 return js
         else:
+            if response.status_code != 200:
+                print(response.status_code, response.text)
             return (response.status_code, response.text)

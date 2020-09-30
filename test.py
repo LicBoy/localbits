@@ -2,7 +2,7 @@ from localbits.localbitcoins import LocalBitcoin
 import requests, json
 import math
 import time, datetime
-import logging
+import logging, sys, traceback
 import re
 
 from localbits import tokens
@@ -29,7 +29,8 @@ almirSberCardMessage = tokens.almirSberCardMessage
 askForFIOMessage = 'фио?'
 
 #IGNORE this users
-ignoreList = ['Nikitakomp7', 'Ellenna', 'DmitriiGrom']
+ignoreList = ['Nikitakomp7', 'Ellenna', 'DmitriiGrom']  #They usually invisible on BUY page
+botsList = []                                           #They are bots on SELL page
 
 def checkForBankNamesRegularExpression(bank_name):
     reSearchSber = re.search(regExpSber, bank_name)
@@ -58,7 +59,7 @@ def getListOfBuyAds(myLimits):
             vals.append(ad)
     return vals
 
-#Get ads from online_sell category
+#Get ads from online_sell category, U SELL HERE
 def getListOfSellAds(adsAmount = 7):
     n = adsAmount
     vals = []
@@ -112,11 +113,11 @@ def countGoodPriceForBUY(sellPrices, buyPrices, spreadDif=20000, minDif=18000):
             break
     resPrice = math.ceil(resPrice)
     print("Counted price:", resPrice)
-    lclbit.sendRequest('/api/ad-equation/{0}/'.format(online_buy), params={
-        'price_equation': str(resPrice)
+    lclbit.sendRequest('/api/ad-equation/{0}/'.format(online_buy), params={'price_equation': str(resPrice)
     }, method='post')
 
-def checkDashboardForNewContacts(dashBoard, msg, start=False):
+def checkDashboardForNewContacts(msg, start=False):
+    dashBoard = lclbit.sendRequest('/api/dashboard/seller/', '', 'get')['contact_list']
     for contact in dashBoard:
         contact_id = str(contact['data']['contact_id'])
         paymentCompleted = contact['data']['payment_completed_at']
@@ -168,7 +169,6 @@ def paymentCompletedContactsControl():
             logger.debug("{0} : {1}".format(id, value))
             print("Payment is ready", id, value)
 
-
 def releaseContactInput(buyerMessages, timer = 10):
     while True:
         if len(buyerMessages) > 0:
@@ -184,7 +184,6 @@ def releaseContactInput(buyerMessages, timer = 10):
                     print("Couldn't release contact {0} status code - {1}\nCheck id".format(contact, req[0]))
                 time.sleep(3)
         time.sleep(timer)
-
 
 def clearOldContactsFromList(*lists):
     for lst in list(lists):
@@ -208,34 +207,47 @@ def get_logger():
     logger.addHandler(fh)
     return logger
 
-def executeAll(workTime, sberMsg, spreadDif=21000):
-    endTime = time.time() + workTime
-    while time.time() < endTime:
-        #Getting needed info---
-        myBuyAdd = lclbit.sendRequest('/api/ad-get/{0}/'.format(online_buy), '', 'get')['ad_list'][0]['data']
-        #mySellAdd = lclbit.sendRequest('/api/ad-get/{0}/'.format(online_sell), '', 'get')['ad_list'][0]['data']
-        dashBoardSellerContacts = lclbit.sendRequest('/api/dashboard/seller/', '', 'get')['contact_list']
-        myLimits = [float(myBuyAdd['min_amount']) , float(myBuyAdd['max_amount'])]
-        #---------
-        sell_Ads = getListOfSellAds(7)
-        buy_Ads = getListOfBuyAds(myLimits)
+def executeAll(spreadDif=21000):
+    #Getting needed info---
+    myBuyAdd = lclbit.sendRequest('/api/ad-get/{0}/'.format(online_buy), '', 'get')['ad_list'][0]['data']
+    #mySellAdd = lclbit.sendRequest('/api/ad-get/{0}/'.format(online_sell), '', 'get')['ad_list'][0]['data']
+    myLimits = [float(myBuyAdd['min_amount']) , float(myBuyAdd['max_amount'])]
+    #---------
+    sell_Ads = getListOfSellAds(7)
+    buy_Ads = getListOfBuyAds(myLimits)
+    countGoodPriceForBUY(sell_Ads, buy_Ads, spreadDif=spreadDif, minDif=19500)
 
-        countGoodPriceForBUY(sell_Ads, buy_Ads, spreadDif=spreadDif, minDif=19500)
-        checkDashboardForNewContacts(dashBoardSellerContacts, sberMsg)
-
-def executeContactsUpdate(workTime, sberMsg):
-    endTime = time.time() + workTime
-    while time.time() < endTime:
-        # Getting needed info---
-        dashBoardSellerContacts = lclbit.sendRequest('/api/dashboard/seller/', '', 'get')['contact_list']
-        checkDashboardForNewContacts(dashBoardSellerContacts, sberMsg)
+#Developing
+def selling():
+    ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/ru/Russian_Federation/transfers-with-specific-bank/.json')
+    st_code = ads.status_code
+    while int(st_code) != 200:
+        print("Couldn't get ads. Code:", ads.status_code, ads.text, "trying to get ads again...")
+        time.sleep(1)
+        ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/ru/Russian_Federation/transfers-with-specific-bank/.json')
+    js = json.loads(ads.text)['data']['ad_list']
+    for ad in js:
+        ad = ad['data']
+        if ad['min_amount'] is None:
+            continue
+        bank_name = ad['bank_name'].upper()
+        # Check if bankName is Sberbank
+        goodBankRegExp = checkForBankNamesRegularExpression(bank_name)
+        min_amount = float(ad['min_amount'])
+        temp_price = float(ad['temp_price'])
+        username = ad['profile']['username']
+        if goodBankRegExp and min_amount <= 1500 and '+' in ad['profile']['trade_count'] and username not in botsList:
+            newPrice = str(math.ceil(temp_price - 5))
+            lclbit.sendRequest('/api/ad-equation/{}/'.format(online_sell), params={'price_equation' : newPrice}, method='post')
+            logger.debug("New SELL price is {0}, before user {1}".format(newPrice, username))
+            break
 
 """main"""
 newContacts = set()
 paymentCompletedList = set()
 buyerMessages = {}
 cardHolders = ['me', 'mom', 'almir']
-workTypes = ['all', 'contacts']
+workTypes = ['all', 'contacts', 'selling']
 if __name__ == "__main__":
     #Needed spread
     curSpread = int(input("ENTER SPREAD DIFFERENCE: "))
@@ -253,7 +265,7 @@ if __name__ == "__main__":
             break
 
     while True:
-        workType = input("ENTER WORKTYPE ( all / contacts ) : ")
+        workType = input("ENTER WORKTYPE ( all / contacts / selling ) : ")
         if workType in workTypes:
             break
 
@@ -261,12 +273,25 @@ if __name__ == "__main__":
     while True:
         try:
             with open('logs.log', 'w'): pass
-            dashBoardSellerContacts = lclbit.sendRequest('/api/dashboard/seller/', '', 'get')['contact_list']
-            checkDashboardForNewContacts(dashBoardSellerContacts, sberMessage, start=True)
-            if workType == 'all': executeAll(workTime=80000, sberMsg=sberMessage, spreadDif=curSpread)
-            elif workType == 'contacts': executeContactsUpdate(80000, sberMsg=sberMessage)
+            workTime = 80000
+            checkDashboardForNewContacts(sberMessage, start=True)
+            if workType == 'all':
+                while time.time() < time.time() + workTime:
+                    executeAll(spreadDif=curSpread)
+                    checkDashboardForNewContacts(sberMessage)
+            elif workType == 'contacts':
+                while time.time() < time.time() + workTime:
+                    checkDashboardForNewContacts(sberMessage)
+            elif workType == 'selling':
+                while time.time() < time.time() + workTime:
+                    selling()
+                    time.sleep(1)
+                    checkDashboardForNewContacts(sberMessage)
+                    time.sleep(1)
             else: print("NO SUCH FUNCTION")
         except Exception as exc:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
             print("Some shit happened at  {}  restarting after 5 sec...".format(datetime.datetime.now()))
             print(exc)
+            traceback.print_exception(exc_type, exc_value, exc_traceback, limit=2, file=sys.stdout)
             time.sleep(5)
