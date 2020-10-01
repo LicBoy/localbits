@@ -117,8 +117,8 @@ def countGoodPriceForBUY(sellPrices, buyPrices, spreadDif=20000, minDif=18000):
     }, method='post')
 
 def checkDashboardForNewContacts(msg, start=False):
-    dashBoard = lclbit.sendRequest('/api/dashboard/seller/', '', 'get')['contact_list']
-    for contact in dashBoard:
+    dashBoard = lclbit.sendRequest('/api/dashboard/seller/', '', 'get')
+    for contact in dashBoard['contact_list']:
         contact_id = str(contact['data']['contact_id'])
         paymentCompleted = contact['data']['payment_completed_at']
         if start == True:
@@ -213,7 +213,7 @@ def executeAll(spreadDif=21000):
     #mySellAdd = lclbit.sendRequest('/api/ad-get/{0}/'.format(online_sell), '', 'get')['ad_list'][0]['data']
     myLimits = [float(myBuyAdd['min_amount']) , float(myBuyAdd['max_amount'])]
     #---------
-    sell_Ads = getListOfSellAds(7)
+    sell_Ads = getListOfSellAds(5)
     buy_Ads = getListOfBuyAds(myLimits)
     countGoodPriceForBUY(sell_Ads, buy_Ads, spreadDif=spreadDif, minDif=19500)
 
@@ -236,10 +236,12 @@ def selling():
         min_amount = float(ad['min_amount'])
         temp_price = float(ad['temp_price'])
         username = ad['profile']['username']
-        if goodBankRegExp and min_amount <= 1500 and '+' in ad['profile']['trade_count'] and username not in botsList:
+        if goodBankRegExp and min_amount <= 1500 and '+' in ad['profile']['trade_count'] \
+                and (username not in botsList and username != myUserName):
             newPrice = str(math.ceil(temp_price - 5))
             lclbit.sendRequest('/api/ad-equation/{}/'.format(online_sell), params={'price_equation' : newPrice}, method='post')
             logger.debug("New SELL price is {0}, before user {1}".format(newPrice, username))
+            print("New SELL price is - {0}, before user - {1}".format(newPrice, username))
             break
 
 """main"""

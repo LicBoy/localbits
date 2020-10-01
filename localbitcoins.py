@@ -300,17 +300,6 @@ class LocalBitcoin:
         else:
             response = requests.post(self.baseurl + endpoint, headers=headers, data=params)
 
-        tries = 5
-        while int(response.status_code) != 200 and tries > 0:
-            time.sleep(5)
-            if method == 'get':
-                response = requests.get(self.baseurl + endpoint, headers=headers, params=params)
-            else:
-                response = requests.post(self.baseurl + endpoint, headers=headers, data=params)
-            tries-=1
-            if tries == 0:
-                print("After 5 tries failed to do smth with params {0}".format(endpoint))
-
         if method == 'get':
             js = json.loads(response.text)
             if 'data' in js:
