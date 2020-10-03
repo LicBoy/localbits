@@ -294,42 +294,20 @@ class LocalBitcoin:
         headers['Apiauth-Nonce'] = str(nonce)
         headers['Apiauth-Signature'] = signature
 
-        response = 0
         if method == 'get':
             response = requests.get(self.baseurl + endpoint, headers=headers, params=params)
-        else:
-            response = requests.post(self.baseurl + endpoint, headers=headers, data=params)
-
-        if method == 'get':
             js = json.loads(response.text)
             if 'data' in js:
                 return js['data']
             else:
-                print("Code 200 but nonce is bad, wait 1 sec...\nHappened at", datetime.now())
-                time.sleep(1)
-                while 'data' not in js:
-                    time.sleep(3)
-                    #self.sendRequest(endpoint, params, method)
-                    #Calculate new nonce
-                    now = datetime.utcnow()
-                    epoch = datetime.utcfromtimestamp(0)
-                    delta = now - epoch
-                    nonce = int(delta.total_seconds())
-
-                    message = str(nonce) + self.hmac_auth_key + endpoint + params_encoded
-                    message_bytes = message.encode('utf-8')
-                    signature = hmac.new(self.hmac_auth_secret.encode('utf-8'), msg=message_bytes,
-                                         digestmod=hashlib.sha256).hexdigest().upper()
-
-                    headers = {}
-                    headers['Apiauth-key'] = self.hmac_auth_key
-                    headers['Apiauth-Nonce'] = str(nonce)
-                    headers['Apiauth-Signature'] = signature
-                    response = requests.get(self.baseurl + endpoint, headers=headers, params=params)
-                    js = json.loads(response.text)
-                print("JS is ready")
-                return js
-        else:
+                print("Code 200 but nonce is bad, wait 1 sec...\nHappened at", datetime.now(), '\n', js)
+                time.sleep(1.1)
+                return self.sendRequest(endpoint, params, 'get')
+        elif method == 'post':
+            response = requests.post(self.baseurl + endpoint, headers=headers, data=params)
             if response.status_code != 200:
                 print(response.status_code, response.text)
-            return (response.status_code, response.text)
+                time.sleep(2)
+                return self.sendRequest(endpoint, params, 'post')
+            else:
+                return (response.status_code, response.text)
