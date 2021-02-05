@@ -273,6 +273,7 @@ class LocalBitcoin:
     def getOwnAds(self):
         return self.sendRequest('/api/ads/', '', 'post')
 
+
     def sendRequest(self, endpoint, params, method):    #Base function
         params_encoded = ''
         if params != '':
@@ -307,7 +308,6 @@ class LocalBitcoin:
             response = requests.post(self.baseurl + endpoint, headers=headers, data=params)
             if response.status_code != 200:
                 print(response.status_code, response.text)
-                time.sleep(2)
                 return self.sendRequest(endpoint, params, 'post')
             else:
                 return (response.status_code, response.text)

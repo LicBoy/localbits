@@ -16,7 +16,7 @@ myUserName = tokens.myUserName
 lclbit = LocalBitcoin(key, secret)
 
 #Regular expressions for Banks: Sber, Tink, Alpha, VTB, Roket, Raif
-regExpSber = r'[$SCСĊⓈĆ₡℃∁ℭŠṠṢṤṦṨ][\W\d]*[BБ6Ⓑ൫ℬḂḄḆ][\W\d]*[EЕĖⒺĘḔḖḘḚḜẸẺẼẾỀỂỄỆῈΈἘἙἚἛἜἝ3][\W\d]*[RPРℙⓇṖṖῬṔℛℜℝ℟ṘṚṜṞ]'
+regExpSber = r'[$SCСĊⓈĆ₡℃∁ℭŠṠṢṤṦṨ][\W\d_]*[BБ6Ⓑ൫ℬḂḄḆ][\W\d_]*[EЕĖⒺĘḔḖḘḚḜẸẺẼẾỀỂỄỆῈΈἘἙἚἛἜἝ3][\W\d_]*[RPРℙⓇṖṖῬṔℛℜℝ℟ṘṚṜṞ]'
 regExpTink = r'[TТ][\W\d]*[ИUI][\W\d]*[НN][\W\d]*[ЬK]'
 regExpAlpha = r'[AА][\W\d]*[ЛL][\W\d]*[ЬP][\W\d]*[ФH][\W\d]*[AА]'
 regExpVTB = r'[ВV][\W\d]*[TТ][\W\d]*[BБ]'
@@ -24,13 +24,14 @@ regExpRoket = r'[РRP][\W\d]*[OО][\W\d]*[КK][\W\d]*[ЕE][\W\d]*[ТT]'
 regExpRaif = r'[РRP][\W\d]*[АA][\W\d]*[ЙI][\W\d]*[ФF]'
 
 ruslanSberCardMessage = tokens.ruslanSberCardMessage
+ayratSberCardMessage = tokens.ayratSberCardMessage
 momSberCardMessage = tokens.momSberCardMessage
 almirSberCardMessage = tokens.almirSberCardMessage
 askForFIOMessage = 'фио?'
 
 #IGNORE this users
 ignoreList = ['Nikitakomp7', 'Ellenna', 'DmitriiGrom']  #They usually invisible on BUY page
-botsList = []                                           #They are bots on SELL page
+botsList = ['13_drunk_soul_13', 'Klaik']                                           #They are bots on SELL page
 
 def checkForBankNamesRegularExpression(bank_name):
     reSearchSber = re.search(regExpSber, bank_name)
@@ -63,31 +64,26 @@ def getListOfBuyAds(myLimits):
 def getListOfSellAds(adsAmount = 7):
     n = adsAmount
     vals = []
-    ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/ru/Russian_Federation/transfers-with-specific-bank/.json')
-    st_code = ads.status_code
-    while int(st_code) != 200:
-        print("Couldn't get ads. Code:", ads.status_code, ads.text, "trying to get ads again...")
-        ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/ru/Russian_Federation/transfers-with-specific-bank/.json')
+    ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/sberbank/.json')
     js = json.loads(ads.text)['data']['ad_list']
     for ad in js:
         ad = ad['data']
-        if ad['min_amount'] is None:
+        if ad['min_amount'] is None or ad['max_amount'] is None:
             continue
-        bank_name = ad['bank_name'].upper()
-        #Check if bankName is Sberbank
-        goodBankRegExp = checkForBankNamesRegularExpression(bank_name)
+
         min_amount = float(ad['min_amount'])
+        max_amount = float(ad['max_amount'])
         temp_price = float(ad['temp_price'])
         username = ad['profile']['username']
-        if goodBankRegExp and min_amount <= 1500 and '+' in ad['profile']['trade_count'] and username not in ignoreList:
+        if min_amount <= 1500 and max_amount > 2000 and '+' in ad['profile']['trade_count'] and username not in ignoreList:
             if n>0:
-                logger.debug("Ad: {2} {0} {1}".format(bank_name, str(temp_price), username))
+                #print(username, max_amount, end= " ")
+                logger.debug("SELL: {1} {0}".format(str(temp_price), username))
                 #print(bank_name, temp_price)
                 vals.append(temp_price)
                 n-=1
     #Return top 7 sell ads from 1st page
     return vals
-
 
 def countGoodPriceForBUY(sellPrices, buyPrices, spreadDif=20000, minDif=18000):
     medPrice = 0; disp = 0
@@ -107,7 +103,7 @@ def countGoodPriceForBUY(sellPrices, buyPrices, spreadDif=20000, minDif=18000):
         resPrice = sellPrices[0] - minDif
 
     for ad in buyPrices:
-        logger.debug("{0}, {1}".format(ad['profile']['username'], ad['temp_price']))
+        logger.debug("BUY: {0}, {1}".format(ad['profile']['username'], ad['temp_price']))
         if float(ad['temp_price']) < resPrice and ad['profile']['username'] != myUserName:
             resPrice = float(ad['temp_price']) + 2
             break
@@ -127,8 +123,8 @@ def checkDashboardForNewContacts(msg, start=False):
                 paymentCompletedList.add(contact_id)
         else:
             if contact_id not in newContacts:
-                print('New contact: ', contact_id)
                 newContacts.add(contact_id)
+                print('New contact: ', contact_id)
                 postMessageRequest = lclbit.postMessageToContact(contact_id, msg)
             if paymentCompleted and contact_id not in paymentCompletedList:
                 paymentCompletedList.add(contact_id)
@@ -219,27 +215,35 @@ def executeAll(spreadDif=21000):
 
 #Developing
 def selling():
-    ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/ru/Russian_Federation/transfers-with-specific-bank/.json')
+    ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/ru/russian-federation/transfers-with-specific-bank/.json')
     st_code = ads.status_code
     while int(st_code) != 200:
         print("Couldn't get ads. Code:", ads.status_code, ads.text, "trying to get ads again...")
         time.sleep(1)
-        ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/ru/Russian_Federation/transfers-with-specific-bank/.json')
+        ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/ru/russian-federation/transfers-with-specific-bank/.json')
     js = json.loads(ads.text)['data']['ad_list']
+    my_price = 0
     for ad in js:
         ad = ad['data']
-        if ad['min_amount'] is None:
+        if ad['min_amount'] is None or ad['max_amount'] is None:
             continue
         bank_name = ad['bank_name'].upper()
         # Check if bankName is Sberbank
         goodBankRegExp = checkForBankNamesRegularExpression(bank_name)
         min_amount = float(ad['min_amount'])
+        max_amount = float(ad['max_amount'])
         temp_price = float(ad['temp_price'])
         username = ad['profile']['username']
+        if goodBankRegExp:
+            logger.debug("{0} - {1}".format(username, bank_name));
         if username == myUserName:
+            my_price = temp_price
+            continue
+        elif goodBankRegExp and min_amount <= 1500 and max_amount >= 1000 and '+' in ad['profile']['trade_count'] \
+                and  (my_price - temp_price == -5) and username not in botsList:
             break
-        elif goodBankRegExp and min_amount <= 1500 and '+' in ad['profile']['trade_count'] \
-                and username not in botsList:
+        elif goodBankRegExp and min_amount <= 1500 and max_amount >= 1000 and '+' in ad['profile']['trade_count'] \
+                and (my_price - temp_price != -5) and username not in botsList:
             newPrice = str(math.ceil(temp_price - 5))
             lclbit.sendRequest('/api/ad-equation/{}/'.format(online_sell), params={'price_equation' : newPrice}, method='post')
             logger.debug("New SELL price is {0}, before user {1}".format(newPrice, username))
@@ -250,7 +254,7 @@ def selling():
 newContacts = set()
 paymentCompletedList = set()
 buyerMessages = {}
-cardHolders = ['me', 'mom', 'almir']
+cardHolders = ['me', 'mom', 'almir', 'ayrat']
 workTypes = ['all', 'contacts', 'selling']
 if __name__ == "__main__":
     #Needed spread
@@ -258,10 +262,12 @@ if __name__ == "__main__":
 
     #Card on which noney will come
     while True:
-        cardHolder = input("ENTER CARD on which money will come ( me / mom / almir ) : ")
+        cardHolder = input("ENTER CARD on which money will come ( me / ayrat / mom / almir ) : ")
         if cardHolder in cardHolders:
             if cardHolder == 'me':
                 sberMessage = ruslanSberCardMessage
+            elif cardHolder == 'ayrat':
+                sberMessage = ayratSberCardMessage
             elif cardHolder == 'mom':
                 sberMessage = momSberCardMessage
             elif cardHolder == 'almir':
