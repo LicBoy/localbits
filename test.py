@@ -259,6 +259,7 @@ def selling():
             break
 
 def scanning():
+    #New branch created here
     buyAds = getListOfBuyAds()[0:5]
     sellAds = getListOfSellAdsPrices(5)
     buyAdsPrices = [float(x['temp_price']) for x in buyAds]
