@@ -1,11 +1,11 @@
 from localbits.localbitcoins import LocalBitcoin
 import requests, json
 import math
-import time, datetime
-import logging, sys, traceback
-import re
-
-from localbits import tokens
+import time, datetime           # for logging
+import logging, sys, traceback  # for errors
+import re                       # for bank recognition (prbbly useless cause of localbitcoins new banks format)
+import winsound                 # for alert testing
+from localbits import tokens    # !!!PERSONAL DATA
 
 key = tokens.key
 secret = tokens.secret
@@ -30,8 +30,9 @@ almirSberCardMessage = tokens.almirSberCardMessage
 askForFIOMessage = 'фио?'
 
 #IGNORE this users
-ignoreList = ['Nikitakomp7', 'Ellenna', 'DmitriiGrom']  #They usually invisible on BUY page
-botsList = ['13_drunk_soul_13', 'Klaik']                                           #They are bots on SELL page
+ignoreList = ['Nikitakomp7', 'Ellenna', 'DmitriiGrom']      #They usually invisible on BUY page
+botsList = ['13_drunk_soul_13', 'Klaik', 'Slonya', 'DmitriiGrom']        #They are bots on SELL page
+scanningShitList = ['DmitriiGrom']
 
 def checkForBankNamesRegularExpression(bank_name):
     reSearchSber = re.search(regExpSber, bank_name)
@@ -43,11 +44,13 @@ def checkForBankNamesRegularExpression(bank_name):
     return (reSearchSber and not reSearchVtb and not reSearchAlpha and not reSearchRoket and not reSearchTink and not reSearchRaif)
 
 #Get ads from online_buy category, U BUY HERE
-def getListOfBuyAds(myLimits):
+def getListOfBuyAds(myLimits=[10000, 50000]): #returns list of ads dictionary
     req = requests.get(lclbit.baseurl + '/sell-bitcoins-online/sberbank/.json')
     while int(req.status_code) != 200:
         req = requests.get(lclbit.baseurl + '/sell-bitcoins-online/sberbank/.json')
     ads = json.loads(req.text)['data']['ad_list']
+
+    printCounter = 5 #Show only 5 ads in logger, but get all ads in list
     vals = []
     for ad in ads:
         ad = ad['data']
@@ -56,12 +59,16 @@ def getListOfBuyAds(myLimits):
 
         #min_amount = float(ad['min_amount'])
         max_amount = float(ad['max_amount'])
-        if max_amount > myLimits[0]: #can be improved
+        username = ad['profile']['username']
+        if max_amount > myLimits[0] and username not in ignoreList: #can be improved
+            if printCounter > 0:
+                logger.debug("BUY: {1} {0}".format(ad['temp_price'], username))
+                printCounter -= 1
             vals.append(ad)
     return vals
 
 #Get ads from online_sell category, U SELL HERE
-def getListOfSellAds(adsAmount = 7):
+def getListOfSellAdsPrices(adsAmount = 7): #returns list of float prices
     n = adsAmount
     vals = []
     ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/sberbank/.json')
@@ -75,13 +82,15 @@ def getListOfSellAds(adsAmount = 7):
         max_amount = float(ad['max_amount'])
         temp_price = float(ad['temp_price'])
         username = ad['profile']['username']
-        if min_amount <= 1500 and max_amount > 2000 and '+' in ad['profile']['trade_count'] and username not in ignoreList:
+        if (min_amount <= 1500 and max_amount > 2000) and '+' in ad['profile']['trade_count'] and username not in botsList:
             if n>0:
                 #print(username, max_amount, end= " ")
                 logger.debug("SELL: {1} {0}".format(str(temp_price), username))
                 #print(bank_name, temp_price)
                 vals.append(temp_price)
                 n-=1
+            else:
+                return vals
     #Return top 7 sell ads from 1st page
     return vals
 
@@ -103,7 +112,6 @@ def countGoodPriceForBUY(sellPrices, buyPrices, spreadDif=20000, minDif=18000):
         resPrice = sellPrices[0] - minDif
 
     for ad in buyPrices:
-        logger.debug("BUY: {0}, {1}".format(ad['profile']['username'], ad['temp_price']))
         if float(ad['temp_price']) < resPrice and ad['profile']['username'] != myUserName:
             resPrice = float(ad['temp_price']) + 2
             break
@@ -209,7 +217,7 @@ def executeAll(spreadDif=21000):
     #mySellAdd = lclbit.sendRequest('/api/ad-get/{0}/'.format(online_sell), '', 'get')['ad_list'][0]['data']
     myLimits = [float(myBuyAdd['min_amount']) , float(myBuyAdd['max_amount'])]
     #---------
-    sell_Ads = getListOfSellAds(adsAmount=5)
+    sell_Ads = getListOfSellAdsPrices(adsAmount=5)
     buy_Ads = getListOfBuyAds(myLimits)
     countGoodPriceForBUY(sell_Ads, buy_Ads, spreadDif=spreadDif, minDif=19500)
 
@@ -250,19 +258,32 @@ def selling():
             print("New SELL price is - {0}, before user - {1}".format(newPrice, username))
             break
 
+def scanning():
+    buyAds = getListOfBuyAds()[0:5]
+    sellAds = getListOfSellAdsPrices(5)
+    buyAdsPrices = [float(x['temp_price']) for x in buyAds]
+
+    buyAverage = round(sum(buyAdsPrices) / len(buyAdsPrices))
+    sellAverage = round(sum(sellAds) / len(sellAds))
+    curDifference = sellAverage - buyAverage
+    print(f"{datetime.datetime.now()} Scanning localbitcoins: ... {curDifference}")
+    if curDifference > 105000:
+        winsound.MessageBeep()
+
+
 """main"""
 newContacts = set()
 paymentCompletedList = set()
 buyerMessages = {}
 cardHolders = ['me', 'mom', 'almir', 'ayrat']
-workTypes = ['all', 'contacts', 'selling']
+workTypes = ['all', 'contacts', 'selling', 'scanning']
 if __name__ == "__main__":
     #Needed spread
     curSpread = int(input("ENTER SPREAD DIFFERENCE: "))
 
     #Card on which noney will come
     while True:
-        cardHolder = input("ENTER CARD on which money will come ( me / ayrat / mom / almir ) : ")
+        cardHolder = input("ENTER CARD on which money will come ( " + " / ".join(cardHolders)  + " ): ").lower()
         if cardHolder in cardHolders:
             if cardHolder == 'me':
                 sberMessage = ruslanSberCardMessage
@@ -274,15 +295,16 @@ if __name__ == "__main__":
                 sberMessage = almirSberCardMessage
             break
 
+    #Get worktype
     while True:
-        workType = input("ENTER WORKTYPE ( all / contacts / selling ) : ")
+        workType = input("ENTER WORKTYPE ( " + " / ".join(workTypes) + " ): ".lower())
         if workType in workTypes:
             break
 
     logger = get_logger()
     while True:
         try:
-            with open('logs.log', 'w'): pass
+            with open('logs.log', 'w'): pass #Clearing log file
             workTime = 80000
             checkDashboardForNewContacts(sberMessage, start=True)
             if workType == 'all':
@@ -298,10 +320,14 @@ if __name__ == "__main__":
                     time.sleep(1)
                     checkDashboardForNewContacts(sberMessage)
                     time.sleep(1)
+            elif workType == "scanning":
+                while time.time() < time.time() + workTime:
+                    scanning()
+                    checkDashboardForNewContacts(sberMessage)
             else: print("NO SUCH FUNCTION")
         except Exception as exc:
             exc_type, exc_value, exc_traceback = sys.exc_info()
-            print("Some shit happened at  {}  restarting after 5 sec...".format(datetime.datetime.now()))
+            print(f"Some shit happened at  {datetime.datetime.now()}  restarting after 5 sec...")
             print(exc)
             traceback.print_exception(exc_type, exc_value, exc_traceback, limit=2, file=sys.stdout)
             time.sleep(5)
