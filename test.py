@@ -6,6 +6,7 @@ import logging, sys, traceback  # for errors
 import re                       # for bank recognition (prbbly useless cause of localbitcoins new banks format)
 import winsound                 # for alert testing
 from localbits import tokens    # !!!PERSONAL DATA
+from matplotlib import pyplot as plt
 
 key = tokens.key
 secret = tokens.secret
@@ -259,8 +260,6 @@ def selling():
             break
 
 def scanning():
-    #New branch created here
-    #testing undo commit
     buyAds = getListOfBuyAds()[0:5]
     sellAds = getListOfSellAdsPrices(5)
     buyAdsPrices = [float(x['temp_price']) for x in buyAds]
@@ -268,11 +267,26 @@ def scanning():
     buyAverage = round(sum(buyAdsPrices) / len(buyAdsPrices))
     sellAverage = round(sum(sellAds) / len(sellAds))
     curDifference = sellAverage - buyAverage
-    print(f"{datetime.datetime.now()} Scanning localbitcoins: ... {curDifference}")
+    averagePrice = (sellAverage + buyAverage) / 2
+    movingAverageList.append(averagePrice)
+    if len(movingAverageList)>=4:
+        movingAverageListOfFour.append(sum(movingAverageList[-4:])/4)
+        if len(movingAverageList) >= 8:
+            movingAverageListOfEight.append(sum(movingAverageList[-8:])/8)
+    print(f"{datetime.datetime.now()} Scanning localbitcoins: ... {curDifference} / Average price: {averagePrice}")
+    print(f"List of averages: {movingAverageList[-10:]}\nList of four averages: {movingAverageListOfFour[-10:]}\nList of eight averages: {movingAverageListOfEight[-10:]}")
+    for lstAndColor in [(movingAverageList, 'b'), (movingAverageListOfFour, 'r'), (movingAverageListOfEight, 'c')]:
+        plt.plot(lstAndColor[0], lstAndColor[1])
+        plt.draw()
+        plt.pause(0.001)
+    plt.show(block=False)
     if curDifference > 105000:
         winsound.MessageBeep()
 
-
+#Testing new
+movingAverageList = []
+movingAverageListOfEight = []
+movingAverageListOfFour = []
 """main"""
 newContacts = set()
 paymentCompletedList = set()
@@ -280,6 +294,8 @@ buyerMessages = {}
 cardHolders = ['me', 'mom', 'almir', 'ayrat']
 workTypes = ['all', 'contacts', 'selling', 'scanning']
 if __name__ == "__main__":
+    plt.ion()
+    plt.show()
     #Needed spread
     curSpread = int(input("ENTER SPREAD DIFFERENCE: "))
 
