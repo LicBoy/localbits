@@ -276,9 +276,8 @@ def scanning():
     print(f"{datetime.datetime.now()} Scanning localbitcoins: ... {curDifference} / Average price: {averagePrice}")
     print(f"List of averages: {movingAverageList[-10:]}\nList of four averages: {movingAverageListOfFour[-10:]}\nList of eight averages: {movingAverageListOfEight[-10:]}")
     for lstAndColor in [(movingAverageList, 'b'), (movingAverageListOfFour, 'r'), (movingAverageListOfEight, 'c')]:
-        plt.plot(lstAndColor[0], lstAndColor[1])
-        plt.draw()
-        plt.pause(0.001)
+        plt.plot(range(len(lstAndColor[0])), lstAndColor[0], color=lstAndColor[1])
+        plt.pause(0.05)
     plt.show(block=False)
     if curDifference > 105000:
         winsound.MessageBeep()
@@ -349,3 +348,4 @@ if __name__ == "__main__":
             print(exc)
             traceback.print_exception(exc_type, exc_value, exc_traceback, limit=2, file=sys.stdout)
             time.sleep(5)
+    plt.show()
