@@ -266,7 +266,7 @@ def scanning():
     buyAverage = round(sum(buyAdsPrices) / len(buyAdsPrices))
     sellAverage = round(sum(sellAds) / len(sellAds))
     curDifference = sellAverage - buyAverage
-    print(f"{datetime.datetime.now()} Scanning localbitcoins: ... {curDifference}")
+    print(f'{datetime.datetime.now().strftime("%d.%m %H:%M:%S")} Scanning localbitcoins: ... {curDifference}')
     if curDifference > 105000:
         winsound.MessageBeep()
 

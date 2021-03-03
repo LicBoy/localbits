@@ -70,6 +70,10 @@ class LocalBitcoin:
     On success there's a complimentary message on the data key.
     """
 
+    def contactReleaseNew(self, contact_id):
+        endpoint = '/api/contact_release/' + contact_id + '/'
+        self.sendRequest(endpoint, '', 'post')
+
     def contactRelease(self, contact_id):
         now = datetime.utcnow()
         epoch = datetime.utcfromtimestamp(0)
@@ -307,7 +311,8 @@ class LocalBitcoin:
         elif method == 'post':
             response = requests.post(self.baseurl + endpoint, headers=headers, data=params)
             if response.status_code != 200:
-                print(response.status_code, response.text)
+                print(response.status_code, response.text, "Tried nonce ", str(nonce), "sleeping 2secs")
+                time.sleep(2)
                 return self.sendRequest(endpoint, params, 'post')
             else:
                 return (response.status_code, response.text)
