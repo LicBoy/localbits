@@ -266,7 +266,7 @@ def scanning():
     buyAverage = round(sum(buyAdsPrices) / len(buyAdsPrices))
     sellAverage = round(sum(sellAds) / len(sellAds))
     curDifference = sellAverage - buyAverage
-    print(f"{datetime.datetime.now()} Scanning localbitcoins: ... {curDifference}")
+    print(f'{datetime.datetime.now().strftime("%d.%m %H:%M:%S")} Scanning localbitcoins: ... {curDifference}')
     if curDifference > 105000:
         winsound.MessageBeep()
 
@@ -327,7 +327,7 @@ if __name__ == "__main__":
             else: print("NO SUCH FUNCTION")
         except Exception as exc:
             exc_type, exc_value, exc_traceback = sys.exc_info()
-            print(f"Some shit happened at  {datetime.datetime.now()}  restarting after 5 sec...")
+            print(f"Some shit happened at  {datetime.datetime.now().strftime('%d.%m %H:%M:%S')}  restarting after 5 sec...")
             print(exc)
             traceback.print_exception(exc_type, exc_value, exc_traceback, limit=2, file=sys.stdout)
             time.sleep(5)

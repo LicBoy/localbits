@@ -305,7 +305,7 @@ class LocalBitcoin:
             if 'data' in js:
                 return js['data']
             else:
-                print("Code 200 but nonce is bad, wait 1 sec...\nHappened at", datetime.now(), '\n', js)
+                print(datetime.now().strftime("%d.%m %H:%M:%S"), "Code 200 but nonce is bad, wait 1 sec...", '\n', js)
                 time.sleep(1.1)
                 return self.sendRequest(endpoint, params, 'get')
         elif method == 'post':
