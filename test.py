@@ -54,15 +54,15 @@ def getListOfBuyAds(myLimits=[10000, 50000]): #returns list of ads dictionary
     vals = []
     for ad in ads:
         ad = ad['data']
-        if ad['min_amount'] is None or ad['max_amount'] is None:
+        if ad['min_amount'] is None or ad['max_amount_available'] is None:
             continue
 
         #min_amount = float(ad['min_amount'])
-        max_amount = float(ad['max_amount'])
+        max_amount = float(ad['max_amount_available'])
         username = ad['profile']['username']
         if max_amount > myLimits[0] and username not in ignoreList: #can be improved
             if printCounter > 0:
-                logger.debug("BUY: {1} {0}".format(ad['temp_price'], username))
+                logger.debug(f"BUY: {ad['temp_price']} {username}")
                 printCounter -= 1
             vals.append(ad)
     return vals
@@ -71,21 +71,23 @@ def getListOfBuyAds(myLimits=[10000, 50000]): #returns list of ads dictionary
 def getListOfSellAdsPrices(adsAmount = 7): #returns list of float prices
     n = adsAmount
     vals = []
-    ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/sberbank/.json')
-    js = json.loads(ads.text)['data']['ad_list']
+    req = requests.get(lclbit.baseurl + '/buy-bitcoins-online/sberbank/.json')
+    while int(req.status_code != 200):
+        req = requests.get(lclbit.baseurl + '/buy-bitcoins-online/sberbank/.json')
+    js = json.loads(req.text)['data']['ad_list']
     for ad in js:
         ad = ad['data']
-        if ad['min_amount'] is None or ad['max_amount'] is None:
+        if ad['min_amount'] is None or ad['max_amount_available'] is None:
             continue
 
         min_amount = float(ad['min_amount'])
-        max_amount = float(ad['max_amount'])
+        max_amount = float(ad['max_amount_available'])
         temp_price = float(ad['temp_price'])
         username = ad['profile']['username']
-        if (min_amount <= 1500 and max_amount > 2000) and '+' in ad['profile']['trade_count'] and username not in botsList:
+        if min_amount <= 1500 and max_amount > 5000 and '+' in ad['profile']['trade_count'] and username not in botsList:
             if n>0:
                 #print(username, max_amount, end= " ")
-                logger.debug("SELL: {1} {0}".format(str(temp_price), username))
+                logger.debug(f"SELL: {str(temp_price)} {username}")
                 #print(bank_name, temp_price)
                 vals.append(temp_price)
                 n-=1
@@ -106,7 +108,7 @@ def countGoodPriceForBUY(sellPrices, buyPrices, spreadDif=20000, minDif=18000):
     disp = math.sqrt(disp)
 
     #print(medPrice, disp)
-    logger.debug("Calculated medprice = {0}, disp = {1}".format(medPrice, disp))
+    logger.debug(f"Calculated medprice = {medPrice}, disp = {disp}")
     resPrice = medPrice + disp - spreadDif
     if sellPrices[0] - resPrice < minDif:
         resPrice = sellPrices[0] - minDif
@@ -222,40 +224,35 @@ def executeAll(spreadDif=21000):
     countGoodPriceForBUY(sell_Ads, buy_Ads, spreadDif=spreadDif, minDif=19500)
 
 #Developing
-def selling():
-    ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/ru/russian-federation/transfers-with-specific-bank/.json')
+def selling(border):
+    ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/sberbank/.json')
     st_code = ads.status_code
     while int(st_code) != 200:
         print("Couldn't get ads. Code:", ads.status_code, ads.text, "trying to get ads again...")
         time.sleep(1)
-        ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/ru/russian-federation/transfers-with-specific-bank/.json')
+        ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/sberbank/.json')
     js = json.loads(ads.text)['data']['ad_list']
-    my_price = 0
+    myPrice = 0
     for ad in js:
         ad = ad['data']
-        if ad['min_amount'] is None or ad['max_amount'] is None:
+        if ad['min_amount'] is None or ad['max_amount_available'] is None:
             continue
-        bank_name = ad['bank_name'].upper()
-        # Check if bankName is Sberbank
-        goodBankRegExp = checkForBankNamesRegularExpression(bank_name)
         min_amount = float(ad['min_amount'])
-        max_amount = float(ad['max_amount'])
+        max_amount = float(ad['max_amount_available'])
         temp_price = float(ad['temp_price'])
         username = ad['profile']['username']
-        if goodBankRegExp:
-            logger.debug("{0} - {1}".format(username, bank_name));
         if username == myUserName:
-            my_price = temp_price
+            myPrice = temp_price
             continue
-        elif goodBankRegExp and min_amount <= 1500 and max_amount >= 1000 and '+' in ad['profile']['trade_count'] \
-                and  (my_price - temp_price == -5) and username not in botsList:
-            break
-        elif goodBankRegExp and min_amount <= 1500 and max_amount >= 1000 and '+' in ad['profile']['trade_count'] \
-                and (my_price - temp_price != -5) and username not in botsList:
-            newPrice = str(math.ceil(temp_price - 5))
-            lclbit.sendRequest('/api/ad-equation/{}/'.format(online_sell), params={'price_equation' : newPrice}, method='post')
-            logger.debug("New SELL price is {0}, before user {1}".format(newPrice, username))
-            print("New SELL price is - {0}, before user - {1}".format(newPrice, username))
+        elif min_amount <= 1500 and max_amount >= 5000 and '+' in ad['profile']['trade_count'] and username not in botsList and temp_price > border:
+            if myPrice < temp_price and temp_price - myPrice == 2:
+                break
+            logger.debug(f"{username} - {temp_price}")
+            newPrice = str(temp_price - 2)
+            logger.debug(f"New SELL price is {newPrice}, before user {username}")
+            print(
+                f"New SELL price is - {newPrice}, before user {username}, minLim = {str(min_amount)}, maxLim = {str(max_amount)}")
+            lclbit.sendRequest(f'/api/ad-equation/{online_sell}/', params={'price_equation' : newPrice}, method='post')
             break
 
 def scanning():
@@ -270,6 +267,8 @@ def scanning():
     if curDifference > 105000:
         winsound.MessageBeep()
 
+def chooseWorkType():   #User input function to define type of work
+    pass
 
 """main"""
 newContacts = set()
@@ -315,11 +314,12 @@ if __name__ == "__main__":
                 while time.time() < time.time() + workTime:
                     checkDashboardForNewContacts(sberMessage)
             elif workType == 'selling':
+                sellBorder = float(input("Sell border: "))
                 while time.time() < time.time() + workTime:
-                    selling()
+                    selling(sellBorder)
                     time.sleep(1)
                     checkDashboardForNewContacts(sberMessage)
-                    time.sleep(1)
+                    time.sleep(2)
             elif workType == "scanning":
                 while time.time() < time.time() + workTime:
                     scanning()
