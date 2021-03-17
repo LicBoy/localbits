@@ -7,7 +7,7 @@ import time
 from datetime import datetime
 
 class LocalBitcoin:
-    baseurl = 'https://localbitcoins.net'
+    baseurl = 'https://localbitcoins.fi'
     nonce_prev = 0
 
     def __init__(self, hmac_auth_key, hmac_auth_secret, debug=False):
