@@ -7993,3 +7993,383 @@
 2021-03-25 11:54:32,543 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
 2021-03-25 11:54:35,145 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
 2021-03-25 11:54:35,149 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:54:37,564 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:54:37,570 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:54:46,202 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/ad-get/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:54:46,208 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:54:46,541 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /buy-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:54:46,657 - MainThread - DEBUG - SELL: 4137100.0 Kashap
+2021-03-25 11:54:46,657 - MainThread - DEBUG - SELL: 4150000.0 CoinDogz
+2021-03-25 11:54:46,657 - MainThread - DEBUG - SELL: 4151199.0 Ting-Tong
+2021-03-25 11:54:46,657 - MainThread - DEBUG - SELL: 4155996.0 Aleksandr_B
+2021-03-25 11:54:46,657 - MainThread - DEBUG - SELL: 4159900.0 sys-evgen
+2021-03-25 11:54:46,659 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:54:49,606 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /sell-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:54:49,702 - MainThread - DEBUG - BUY: 4105100.00 Smart_Change
+2021-03-25 11:54:49,702 - MainThread - DEBUG - BUY: 4029085.10 voloffme
+2021-03-25 11:54:49,702 - MainThread - DEBUG - BUY: 4026701.00 diodei
+2021-03-25 11:54:49,702 - MainThread - DEBUG - BUY: 4026700.00 hardtop
+2021-03-25 11:54:49,702 - MainThread - DEBUG - BUY: 4017233.00 CoinDogz
+2021-03-25 11:54:49,702 - MainThread - DEBUG - Calculated medprice = 4150839.0, disp = 7723.8592944201155
+2021-03-25 11:54:49,704 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:54:52,383 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:54:52,389 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:54:54,815 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:54:54,819 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:55:03,453 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/ad-get/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:55:03,457 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:55:03,773 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /buy-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:55:03,892 - MainThread - DEBUG - SELL: 4137100.0 Kashap
+2021-03-25 11:55:03,892 - MainThread - DEBUG - SELL: 4150000.0 CoinDogz
+2021-03-25 11:55:03,892 - MainThread - DEBUG - SELL: 4151199.0 Ting-Tong
+2021-03-25 11:55:03,892 - MainThread - DEBUG - SELL: 4155996.0 Aleksandr_B
+2021-03-25 11:55:03,892 - MainThread - DEBUG - SELL: 4159900.0 sys-evgen
+2021-03-25 11:55:03,894 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:55:06,913 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /sell-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:55:07,015 - MainThread - DEBUG - BUY: 4105100.00 Smart_Change
+2021-03-25 11:55:07,015 - MainThread - DEBUG - BUY: 4029085.10 voloffme
+2021-03-25 11:55:07,015 - MainThread - DEBUG - BUY: 4026701.00 diodei
+2021-03-25 11:55:07,016 - MainThread - DEBUG - BUY: 4026700.00 hardtop
+2021-03-25 11:55:07,016 - MainThread - DEBUG - BUY: 4017233.00 CoinDogz
+2021-03-25 11:55:07,016 - MainThread - DEBUG - Calculated medprice = 4150839.0, disp = 7723.8592944201155
+2021-03-25 11:55:07,018 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:55:09,633 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:55:09,637 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:55:12,063 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:55:12,067 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:55:20,697 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/ad-get/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:55:20,701 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:55:21,169 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /buy-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:55:21,286 - MainThread - DEBUG - SELL: 4137100.0 Kashap
+2021-03-25 11:55:21,286 - MainThread - DEBUG - SELL: 4150000.0 CoinDogz
+2021-03-25 11:55:21,286 - MainThread - DEBUG - SELL: 4151199.0 Ting-Tong
+2021-03-25 11:55:21,287 - MainThread - DEBUG - SELL: 4155996.0 Aleksandr_B
+2021-03-25 11:55:21,287 - MainThread - DEBUG - SELL: 4159900.0 sys-evgen
+2021-03-25 11:55:21,289 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:55:24,284 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /sell-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:55:24,382 - MainThread - DEBUG - BUY: 4105100.00 Smart_Change
+2021-03-25 11:55:24,382 - MainThread - DEBUG - BUY: 4029085.10 voloffme
+2021-03-25 11:55:24,382 - MainThread - DEBUG - BUY: 4026701.00 diodei
+2021-03-25 11:55:24,382 - MainThread - DEBUG - BUY: 4026700.00 hardtop
+2021-03-25 11:55:24,382 - MainThread - DEBUG - BUY: 4017233.00 CoinDogz
+2021-03-25 11:55:24,383 - MainThread - DEBUG - Calculated medprice = 4150839.0, disp = 7723.8592944201155
+2021-03-25 11:55:24,384 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:55:27,016 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:55:27,022 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:55:29,334 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:55:29,339 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:55:37,951 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/ad-get/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:55:37,956 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:55:38,279 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /buy-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:55:38,394 - MainThread - DEBUG - SELL: 4137100.0 Kashap
+2021-03-25 11:55:38,395 - MainThread - DEBUG - SELL: 4150000.0 CoinDogz
+2021-03-25 11:55:38,395 - MainThread - DEBUG - SELL: 4155995.0 Ting-Tong
+2021-03-25 11:55:38,395 - MainThread - DEBUG - SELL: 4155996.0 Aleksandr_B
+2021-03-25 11:55:38,395 - MainThread - DEBUG - SELL: 4159900.0 sys-evgen
+2021-03-25 11:55:38,397 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:55:41,489 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /sell-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:55:41,595 - MainThread - DEBUG - BUY: 4105100.00 Smart_Change
+2021-03-25 11:55:41,595 - MainThread - DEBUG - BUY: 4029085.10 voloffme
+2021-03-25 11:55:41,596 - MainThread - DEBUG - BUY: 4026701.00 diodei
+2021-03-25 11:55:41,596 - MainThread - DEBUG - BUY: 4026700.00 hardtop
+2021-03-25 11:55:41,596 - MainThread - DEBUG - BUY: 4017233.00 CoinDogz
+2021-03-25 11:55:41,596 - MainThread - DEBUG - Calculated medprice = 4151798.2, disp = 8001.805106349441
+2021-03-25 11:55:41,600 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:55:44,145 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:55:44,149 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:55:46,571 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:55:46,576 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:55:55,206 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/ad-get/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:55:55,210 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:55:55,522 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /buy-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:55:55,635 - MainThread - DEBUG - SELL: 4137100.0 Kashap
+2021-03-25 11:55:55,635 - MainThread - DEBUG - SELL: 4150000.0 CoinDogz
+2021-03-25 11:55:55,635 - MainThread - DEBUG - SELL: 4155995.0 Ting-Tong
+2021-03-25 11:55:55,635 - MainThread - DEBUG - SELL: 4155996.0 Aleksandr_B
+2021-03-25 11:55:55,635 - MainThread - DEBUG - SELL: 4159900.0 sys-evgen
+2021-03-25 11:55:55,637 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:55:58,666 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /sell-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:55:58,775 - MainThread - DEBUG - BUY: 4105100.00 Smart_Change
+2021-03-25 11:55:58,775 - MainThread - DEBUG - BUY: 4029085.10 voloffme
+2021-03-25 11:55:58,775 - MainThread - DEBUG - BUY: 4026701.00 diodei
+2021-03-25 11:55:58,775 - MainThread - DEBUG - BUY: 4026700.00 hardtop
+2021-03-25 11:55:58,775 - MainThread - DEBUG - BUY: 4017233.00 CoinDogz
+2021-03-25 11:55:58,776 - MainThread - DEBUG - Calculated medprice = 4151798.2, disp = 8001.805106349441
+2021-03-25 11:55:58,777 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:56:01,367 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:56:01,372 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:56:03,822 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:56:03,830 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:56:12,436 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/ad-get/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:56:12,441 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:56:12,735 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /buy-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:56:12,853 - MainThread - DEBUG - SELL: 4137100.0 Kashap
+2021-03-25 11:56:12,853 - MainThread - DEBUG - SELL: 4150000.0 CoinDogz
+2021-03-25 11:56:12,853 - MainThread - DEBUG - SELL: 4155995.0 Ting-Tong
+2021-03-25 11:56:12,853 - MainThread - DEBUG - SELL: 4155996.0 Aleksandr_B
+2021-03-25 11:56:12,853 - MainThread - DEBUG - SELL: 4159900.0 sys-evgen
+2021-03-25 11:56:12,856 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:56:16,039 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /sell-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:56:16,120 - MainThread - DEBUG - BUY: 4105100.00 Smart_Change
+2021-03-25 11:56:16,120 - MainThread - DEBUG - BUY: 4029085.10 voloffme
+2021-03-25 11:56:16,120 - MainThread - DEBUG - BUY: 4026701.00 diodei
+2021-03-25 11:56:16,120 - MainThread - DEBUG - BUY: 4026700.00 hardtop
+2021-03-25 11:56:16,120 - MainThread - DEBUG - BUY: 4025001.00 Timbit1995
+2021-03-25 11:56:16,120 - MainThread - DEBUG - Calculated medprice = 4151798.2, disp = 8001.805106349441
+2021-03-25 11:56:16,123 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:56:18,611 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:56:18,620 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:56:21,086 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:56:21,090 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:56:29,693 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/ad-get/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:56:29,702 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:56:30,009 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /buy-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:56:30,124 - MainThread - DEBUG - SELL: 4137100.0 Kashap
+2021-03-25 11:56:30,124 - MainThread - DEBUG - SELL: 4150000.0 CoinDogz
+2021-03-25 11:56:30,124 - MainThread - DEBUG - SELL: 4155995.0 Ting-Tong
+2021-03-25 11:56:30,124 - MainThread - DEBUG - SELL: 4155996.0 Aleksandr_B
+2021-03-25 11:56:30,125 - MainThread - DEBUG - SELL: 4159900.0 sys-evgen
+2021-03-25 11:56:30,126 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:56:33,191 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /sell-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:56:33,295 - MainThread - DEBUG - BUY: 4105100.00 Smart_Change
+2021-03-25 11:56:33,295 - MainThread - DEBUG - BUY: 4029085.10 voloffme
+2021-03-25 11:56:33,295 - MainThread - DEBUG - BUY: 4026701.00 diodei
+2021-03-25 11:56:33,295 - MainThread - DEBUG - BUY: 4026700.00 hardtop
+2021-03-25 11:56:33,295 - MainThread - DEBUG - BUY: 4025001.00 Timbit1995
+2021-03-25 11:56:33,295 - MainThread - DEBUG - Calculated medprice = 4151798.2, disp = 8001.805106349441
+2021-03-25 11:56:33,297 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:56:35,876 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:56:35,881 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:56:38,316 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:56:38,320 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:56:46,958 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/ad-get/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:56:46,962 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:56:47,271 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /buy-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:56:47,391 - MainThread - DEBUG - SELL: 4137100.0 Kashap
+2021-03-25 11:56:47,391 - MainThread - DEBUG - SELL: 4150000.0 CoinDogz
+2021-03-25 11:56:47,391 - MainThread - DEBUG - SELL: 4155995.0 Ting-Tong
+2021-03-25 11:56:47,391 - MainThread - DEBUG - SELL: 4155996.0 Aleksandr_B
+2021-03-25 11:56:47,391 - MainThread - DEBUG - SELL: 4159900.0 sys-evgen
+2021-03-25 11:56:47,393 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:56:50,384 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /sell-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:56:50,488 - MainThread - DEBUG - BUY: 4105100.00 Smart_Change
+2021-03-25 11:56:50,488 - MainThread - DEBUG - BUY: 4029085.10 voloffme
+2021-03-25 11:56:50,488 - MainThread - DEBUG - BUY: 4026701.00 diodei
+2021-03-25 11:56:50,488 - MainThread - DEBUG - BUY: 4026700.00 hardtop
+2021-03-25 11:56:50,488 - MainThread - DEBUG - BUY: 4025001.00 Timbit1995
+2021-03-25 11:56:50,489 - MainThread - DEBUG - Calculated medprice = 4151798.2, disp = 8001.805106349441
+2021-03-25 11:56:50,491 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:56:53,151 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:56:53,155 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:56:55,571 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:56:55,576 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:57:04,285 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/ad-get/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:57:04,289 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:57:04,600 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /buy-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:57:04,713 - MainThread - DEBUG - SELL: 4137100.0 Kashap
+2021-03-25 11:57:04,714 - MainThread - DEBUG - SELL: 4155995.0 Ting-Tong
+2021-03-25 11:57:04,714 - MainThread - DEBUG - SELL: 4155996.0 Aleksandr_B
+2021-03-25 11:57:04,714 - MainThread - DEBUG - SELL: 4159900.0 sys-evgen
+2021-03-25 11:57:04,714 - MainThread - DEBUG - SELL: 4160000.0 shetius
+2021-03-25 11:57:04,716 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:57:07,708 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /sell-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:57:07,811 - MainThread - DEBUG - BUY: 4105100.00 Smart_Change
+2021-03-25 11:57:07,812 - MainThread - DEBUG - BUY: 4055202.91 Nikovlasik
+2021-03-25 11:57:07,812 - MainThread - DEBUG - BUY: 4029085.10 voloffme
+2021-03-25 11:57:07,812 - MainThread - DEBUG - BUY: 4026701.00 diodei
+2021-03-25 11:57:07,812 - MainThread - DEBUG - BUY: 4026700.00 hardtop
+2021-03-25 11:57:07,812 - MainThread - DEBUG - Calculated medprice = 4153798.2, disp = 8534.405952378876
+2021-03-25 11:57:07,814 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:57:10,460 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:57:10,464 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:57:12,826 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:57:12,830 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:57:21,438 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/ad-get/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:57:21,442 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:57:21,756 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /buy-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:57:21,865 - MainThread - DEBUG - SELL: 4137100.0 Kashap
+2021-03-25 11:57:21,865 - MainThread - DEBUG - SELL: 4155995.0 Ting-Tong
+2021-03-25 11:57:21,865 - MainThread - DEBUG - SELL: 4155996.0 Aleksandr_B
+2021-03-25 11:57:21,865 - MainThread - DEBUG - SELL: 4159900.0 sys-evgen
+2021-03-25 11:57:21,865 - MainThread - DEBUG - SELL: 4160000.0 shetius
+2021-03-25 11:57:21,867 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:57:24,879 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /sell-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:57:24,983 - MainThread - DEBUG - BUY: 4105100.00 Smart_Change
+2021-03-25 11:57:24,983 - MainThread - DEBUG - BUY: 4055202.91 Nikovlasik
+2021-03-25 11:57:24,983 - MainThread - DEBUG - BUY: 4030001.00 Timbit1995
+2021-03-25 11:57:24,983 - MainThread - DEBUG - BUY: 4029085.10 voloffme
+2021-03-25 11:57:24,983 - MainThread - DEBUG - BUY: 4026701.00 diodei
+2021-03-25 11:57:24,983 - MainThread - DEBUG - Calculated medprice = 4153798.2, disp = 8534.405952378876
+2021-03-25 11:57:24,985 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:57:27,621 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:57:27,626 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:57:30,071 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:57:30,080 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:57:38,707 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/ad-get/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:57:38,711 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:57:39,031 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /buy-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:57:39,146 - MainThread - DEBUG - SELL: 4137100.0 Kashap
+2021-03-25 11:57:39,146 - MainThread - DEBUG - SELL: 4155995.0 Ting-Tong
+2021-03-25 11:57:39,146 - MainThread - DEBUG - SELL: 4155996.0 Aleksandr_B
+2021-03-25 11:57:39,146 - MainThread - DEBUG - SELL: 4159900.0 sys-evgen
+2021-03-25 11:57:39,146 - MainThread - DEBUG - SELL: 4160000.0 shetius
+2021-03-25 11:57:39,148 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:57:42,155 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /sell-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:57:42,258 - MainThread - DEBUG - BUY: 4105100.00 Smart_Change
+2021-03-25 11:57:42,259 - MainThread - DEBUG - BUY: 4055202.91 Nikovlasik
+2021-03-25 11:57:42,259 - MainThread - DEBUG - BUY: 4030001.00 Timbit1995
+2021-03-25 11:57:42,259 - MainThread - DEBUG - BUY: 4029085.10 voloffme
+2021-03-25 11:57:42,259 - MainThread - DEBUG - BUY: 4026701.00 diodei
+2021-03-25 11:57:42,259 - MainThread - DEBUG - Calculated medprice = 4153798.2, disp = 8534.405952378876
+2021-03-25 11:57:42,261 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:57:44,893 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:57:44,897 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:57:47,327 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:57:47,332 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:57:55,953 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/ad-get/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:57:55,958 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:57:56,256 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /buy-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:57:56,368 - MainThread - DEBUG - SELL: 4137100.0 Kashap
+2021-03-25 11:57:56,368 - MainThread - DEBUG - SELL: 4155995.0 Ting-Tong
+2021-03-25 11:57:56,368 - MainThread - DEBUG - SELL: 4155996.0 Aleksandr_B
+2021-03-25 11:57:56,368 - MainThread - DEBUG - SELL: 4159900.0 sys-evgen
+2021-03-25 11:57:56,368 - MainThread - DEBUG - SELL: 4160000.0 shetius
+2021-03-25 11:57:56,370 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:57:59,368 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /sell-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:57:59,473 - MainThread - DEBUG - BUY: 4105100.00 Smart_Change
+2021-03-25 11:57:59,473 - MainThread - DEBUG - BUY: 4055202.91 Nikovlasik
+2021-03-25 11:57:59,473 - MainThread - DEBUG - BUY: 4030001.00 Timbit1995
+2021-03-25 11:57:59,473 - MainThread - DEBUG - BUY: 4029085.10 voloffme
+2021-03-25 11:57:59,473 - MainThread - DEBUG - BUY: 4026701.00 diodei
+2021-03-25 11:57:59,473 - MainThread - DEBUG - Calculated medprice = 4153798.2, disp = 8534.405952378876
+2021-03-25 11:57:59,476 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:58:02,110 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:58:02,120 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:58:04,570 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:58:04,579 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:58:13,211 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/ad-get/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:58:13,216 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:58:13,554 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /buy-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:58:13,670 - MainThread - DEBUG - SELL: 4137100.0 Kashap
+2021-03-25 11:58:13,670 - MainThread - DEBUG - SELL: 4155995.0 Ting-Tong
+2021-03-25 11:58:13,670 - MainThread - DEBUG - SELL: 4155996.0 Aleksandr_B
+2021-03-25 11:58:13,670 - MainThread - DEBUG - SELL: 4159900.0 sys-evgen
+2021-03-25 11:58:13,670 - MainThread - DEBUG - SELL: 4160000.0 shetius
+2021-03-25 11:58:13,672 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:58:16,642 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /sell-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:58:16,744 - MainThread - DEBUG - BUY: 4105100.00 Smart_Change
+2021-03-25 11:58:16,744 - MainThread - DEBUG - BUY: 4055202.91 Nikovlasik
+2021-03-25 11:58:16,744 - MainThread - DEBUG - BUY: 4030001.00 Timbit1995
+2021-03-25 11:58:16,744 - MainThread - DEBUG - BUY: 4029085.10 voloffme
+2021-03-25 11:58:16,744 - MainThread - DEBUG - BUY: 4026701.00 diodei
+2021-03-25 11:58:16,744 - MainThread - DEBUG - Calculated medprice = 4153798.2, disp = 8534.405952378876
+2021-03-25 11:58:16,746 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:58:19,400 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:58:19,405 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:58:21,832 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:58:21,836 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:58:30,439 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/ad-get/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:58:30,443 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:58:30,759 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /buy-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:58:30,872 - MainThread - DEBUG - SELL: 4148900.0 Kashap
+2021-03-25 11:58:30,872 - MainThread - DEBUG - SELL: 4155995.0 Ting-Tong
+2021-03-25 11:58:30,872 - MainThread - DEBUG - SELL: 4155996.0 Aleksandr_B
+2021-03-25 11:58:30,872 - MainThread - DEBUG - SELL: 4159900.0 sys-evgen
+2021-03-25 11:58:30,872 - MainThread - DEBUG - SELL: 4160000.0 shetius
+2021-03-25 11:58:30,874 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:58:33,842 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /sell-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:58:33,950 - MainThread - DEBUG - BUY: 4105100.00 Smart_Change
+2021-03-25 11:58:33,950 - MainThread - DEBUG - BUY: 4055202.91 Nikovlasik
+2021-03-25 11:58:33,950 - MainThread - DEBUG - BUY: 4030001.00 Timbit1995
+2021-03-25 11:58:33,950 - MainThread - DEBUG - BUY: 4029085.10 voloffme
+2021-03-25 11:58:33,950 - MainThread - DEBUG - BUY: 4026701.00 diodei
+2021-03-25 11:58:33,951 - MainThread - DEBUG - Calculated medprice = 4156158.2, disp = 4037.1996433171353
+2021-03-25 11:58:33,953 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:58:36,622 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:58:36,626 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:58:39,089 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:58:39,093 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:58:47,696 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/ad-get/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:58:47,700 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:58:48,015 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /buy-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:58:48,130 - MainThread - DEBUG - SELL: 4148900.0 Kashap
+2021-03-25 11:58:48,130 - MainThread - DEBUG - SELL: 4155995.0 Ting-Tong
+2021-03-25 11:58:48,130 - MainThread - DEBUG - SELL: 4155996.0 Aleksandr_B
+2021-03-25 11:58:48,130 - MainThread - DEBUG - SELL: 4159900.0 sys-evgen
+2021-03-25 11:58:48,130 - MainThread - DEBUG - SELL: 4160000.0 shetius
+2021-03-25 11:58:48,132 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:58:51,114 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /sell-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:58:51,219 - MainThread - DEBUG - BUY: 4105100.00 Smart_Change
+2021-03-25 11:58:51,219 - MainThread - DEBUG - BUY: 4055202.91 Nikovlasik
+2021-03-25 11:58:51,219 - MainThread - DEBUG - BUY: 4030001.00 Timbit1995
+2021-03-25 11:58:51,219 - MainThread - DEBUG - BUY: 4029085.10 voloffme
+2021-03-25 11:58:51,219 - MainThread - DEBUG - BUY: 4026701.00 diodei
+2021-03-25 11:58:51,220 - MainThread - DEBUG - Calculated medprice = 4156158.2, disp = 4037.1996433171353
+2021-03-25 11:58:51,221 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:58:53,864 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:58:53,869 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:58:56,314 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:58:56,318 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:59:04,961 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/ad-get/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:59:04,966 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:59:05,424 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /buy-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:59:05,537 - MainThread - DEBUG - SELL: 4148900.0 Kashap
+2021-03-25 11:59:05,537 - MainThread - DEBUG - SELL: 4151497.0 Ting-Tong
+2021-03-25 11:59:05,537 - MainThread - DEBUG - SELL: 4155996.0 Aleksandr_B
+2021-03-25 11:59:05,537 - MainThread - DEBUG - SELL: 4159900.0 sys-evgen
+2021-03-25 11:59:05,537 - MainThread - DEBUG - SELL: 4160000.0 shetius
+2021-03-25 11:59:05,539 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:59:08,504 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /sell-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:59:08,599 - MainThread - DEBUG - BUY: 4105100.00 Smart_Change
+2021-03-25 11:59:08,600 - MainThread - DEBUG - BUY: 4055202.91 Nikovlasik
+2021-03-25 11:59:08,600 - MainThread - DEBUG - BUY: 4030001.00 Timbit1995
+2021-03-25 11:59:08,600 - MainThread - DEBUG - BUY: 4029085.10 voloffme
+2021-03-25 11:59:08,600 - MainThread - DEBUG - BUY: 4026701.00 diodei
+2021-03-25 11:59:08,600 - MainThread - DEBUG - Calculated medprice = 4155258.6, disp = 4453.0586162771315
+2021-03-25 11:59:08,602 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:59:11,268 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:59:11,272 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:59:13,589 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:59:13,594 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:59:22,183 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/ad-get/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:59:22,187 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:59:22,501 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /buy-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:59:22,615 - MainThread - DEBUG - SELL: 4148900.0 Kashap
+2021-03-25 11:59:22,615 - MainThread - DEBUG - SELL: 4151497.0 Ting-Tong
+2021-03-25 11:59:22,615 - MainThread - DEBUG - SELL: 4155996.0 Aleksandr_B
+2021-03-25 11:59:22,615 - MainThread - DEBUG - SELL: 4159900.0 sys-evgen
+2021-03-25 11:59:22,616 - MainThread - DEBUG - SELL: 4160000.0 shetius
+2021-03-25 11:59:22,617 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:59:25,656 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /sell-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:59:25,750 - MainThread - DEBUG - BUY: 4105100.00 Smart_Change
+2021-03-25 11:59:25,750 - MainThread - DEBUG - BUY: 4055202.91 Nikovlasik
+2021-03-25 11:59:25,750 - MainThread - DEBUG - BUY: 4030001.00 Timbit1995
+2021-03-25 11:59:25,750 - MainThread - DEBUG - BUY: 4029085.10 voloffme
+2021-03-25 11:59:25,750 - MainThread - DEBUG - BUY: 4026701.00 diodei
+2021-03-25 11:59:25,750 - MainThread - DEBUG - Calculated medprice = 4155258.6, disp = 4453.0586162771315
+2021-03-25 11:59:25,752 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:59:28,345 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:59:28,350 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:59:30,818 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:59:30,822 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:59:39,454 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/ad-get/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:59:39,459 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:59:39,805 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /buy-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:59:39,926 - MainThread - DEBUG - SELL: 4148900.0 Kashap
+2021-03-25 11:59:39,926 - MainThread - DEBUG - SELL: 4151494.0 Ting-Tong
+2021-03-25 11:59:39,926 - MainThread - DEBUG - SELL: 4155996.0 Aleksandr_B
+2021-03-25 11:59:39,926 - MainThread - DEBUG - SELL: 4159900.0 sys-evgen
+2021-03-25 11:59:39,926 - MainThread - DEBUG - SELL: 4160000.0 shetius
+2021-03-25 11:59:39,929 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:59:42,886 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /sell-bitcoins-online/sberbank/.json HTTP/1.1" 200 None
+2021-03-25 11:59:42,989 - MainThread - DEBUG - BUY: 4105100.00 Smart_Change
+2021-03-25 11:59:42,990 - MainThread - DEBUG - BUY: 4055202.91 Nikovlasik
+2021-03-25 11:59:42,990 - MainThread - DEBUG - BUY: 4030001.00 Timbit1995
+2021-03-25 11:59:42,990 - MainThread - DEBUG - BUY: 4029085.10 voloffme
+2021-03-25 11:59:42,990 - MainThread - DEBUG - BUY: 4026701.00 diodei
+2021-03-25 11:59:42,990 - MainThread - DEBUG - Calculated medprice = 4155258.0, disp = 4453.56558276624
+2021-03-25 11:59:42,992 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:59:45,619 - MainThread - DEBUG - https://localbitcoins.fi:443 "POST /api/ad-equation/1257933/ HTTP/1.1" 200 None
+2021-03-25 11:59:45,628 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443
+2021-03-25 11:59:48,083 - MainThread - DEBUG - https://localbitcoins.fi:443 "GET /api/dashboard/seller/ HTTP/1.1" 200 None
+2021-03-25 11:59:48,088 - MainThread - DEBUG - Starting new HTTPS connection (1): localbitcoins.fi:443

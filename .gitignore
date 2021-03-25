@@ -2,3 +2,4 @@ tokens.py
 execution.py
 multiprocessTesting.py
 __pycache__
+logs.log
