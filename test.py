@@ -123,57 +123,63 @@ def countGoodPriceForBUY(sellPrices, buyPrices, spreadDif=20000, minDif=18000):
     }, method='post')
 
 def checkDashboardForNewContacts(msg, start=False):
+    for contact_id in contactsDict.keys():
+        # TESTING
+        if not contactsDict[contact_id]['closed']:
+            contactReq = lclbit.getContactInfo(contact_id)
+            if contactReq['closed_at']:
+                print(f"Contact {contact_id} is closed, dict updated")
+                contactsDict[contact_id]['closed'] = True
+
     dashBoard = lclbit.sendRequest('/api/dashboard/seller/', '', 'get')
     for contact in dashBoard['contact_list']:
-        contact_id = str(contact['data']['contact_id'])
-        paymentCompleted = contact['data']['payment_completed_at']
+        contact = contact['data']
+        contact_id = str(contact['contact_id'])
+        paymentCompleted = contact['payment_completed_at']
         if start == True:
-            newContacts.add(contact_id)
+            contactsDict[contact_id] = {
+                'sentCard' : True,
+                'askedFIO': True,
+                'closed' : False,
+                'payment_completed' : False,
+                'buyerMessages' : [],
+                'amount' : contact['amount']
+            }
             if paymentCompleted:
-                paymentCompletedList.add(contact_id)
+                contactsDict[contact_id]['payment_completed'] = True
         else:
-            if contact_id not in newContacts:
-                newContacts.add(contact_id)
-                print('New contact: ', contact_id)
+            if contact_id not in contactsDict:
+                contactsDict[contact_id] = {
+                    'sentCard': False,
+                    'askedFIO' : False,
+                    'closed': False,
+                    'payment_completed': False,
+                    'buyerMessages': [],
+                    'amount': contact['amount']
+                }
                 postMessageRequest = lclbit.postMessageToContact(contact_id, msg)
-            if paymentCompleted and contact_id not in paymentCompletedList:
-                paymentCompletedList.add(contact_id)
-                print('Payment completed: ', contact_id)
+                if postMessageRequest[0] == 200:
+                    contactsDict[contact_id]['sentCard'] = True #Changing dictionary only if message posting was succesful(code 200)
+                    print('New contact: ', contact_id)
+            if not contactsDict[contact_id]['closed'] and paymentCompleted:
+                contactsDict[contact_id]['payment_completed'] = True
 
-                #Ask for FIO
+                #Get user's mesggages and ask for FIO if needed
                 messageReq = lclbit.getContactMessages(contact_id)
                 messages = messageReq['message_list']
-                if len(messages) == 1:
-                    lclbit.postMessageToContact(contact_id, message=askForFIOMessage)
+                contactsDict[contact_id]['buyerMessages'] = [msg['msg'] for msg in messages if msg['sender']['username'] != myUserName]
+                if not contactsDict[contact_id]['askedFIO'] and len(contactsDict[contact_id]['buyerMessages']) == 0:
+                    #There could be better way of determining if user sent his name
+                    if lclbit.postMessageToContact(contact_id, message=askForFIOMessage)[0] == 200:
+                        contactsDict[contact_id]['askedFIO'] = True #Changing dictionary only if message posting was succesful(code 200)
+
+    completedPayments = [[id, data['amount'], data['buyerMessages']] for id, data in contactsDict.items() if not data['closed'] and data['payment_completed']]
+    if len(completedPayments) > 0:
+        print("Completed payments:\n", " ".join([completedPayment[0] for completedPayment in completedPayments]))
+        for elem in completedPayments:
+            print(f"{elem[0]} - {elem[1]} RUB, msgs: {elem[2]}")
+    #print(json.dumps(contactsDict, indent=4))
         #newContacts = newContacts & set(dashBoard)
-
-def paymentCompletedContactsControl():
-    for contact_id in paymentCompletedList.copy():
-        curContact = lclbit.sendRequest('/api/contact_info/{0}/'.format(contact_id), '', 'get')
-
-        buyerName = curContact['buyer']['username']
-        amount = curContact['amount']
-        messageReq = lclbit.getContactMessages(contact_id)
-
-        messages = messageReq['message_list']
-        if contact_id in buyerMessages and buyerMessages[contact_id][3] is True:
-            buyerMessages[contact_id] = [buyerName, amount, [], True]
-        else:
-            buyerMessages[contact_id] = [buyerName, amount, [], False]
-        for msg in messages:
-            if msg['sender']['username'] == buyerName:
-                buyerMessages[contact_id][2].append(msg['msg'])
-        buyerDidntWriteAnything = len(buyerMessages[contact_id][2]) == 0
-        askedForFIO = buyerMessages[contact_id][3]
-        if buyerDidntWriteAnything and not askedForFIO:
-            buyerMessages[contact_id][3] = True
-            lclbit.postMessageToContact(contact_id, message=askForFIOMessage)
-
-        #Print info about new contacts
-        logger.debug("Some payments are ready")
-        for id, value in buyerMessages.items():
-            logger.debug("{0} : {1}".format(id, value))
-            print("Payment is ready", id, value)
 
 def releaseContactInput(buyerMessages, timer = 10):
     while True:
@@ -190,16 +196,6 @@ def releaseContactInput(buyerMessages, timer = 10):
                     print("Couldn't release contact {0} status code - {1}\nCheck id".format(contact, req[0]))
                 time.sleep(3)
         time.sleep(timer)
-
-def clearOldContactsFromList(*lists):
-    for lst in list(lists):
-        for contact_id in lst.copy():
-            req = lclbit.sendRequest('/api/contact_info/{0}/'.format(contact_id), '', 'get')
-            st_code = req[0]
-            while int(st_code) != 200:
-                req = lclbit.sendRequest('/api/contact_info/{0}/'.format(contact_id), '', 'get')
-            if contact_id in lst and req[1]['closed_at'] is not None:
-                lst.discard(contact_id)
 
 def get_logger():
     logger = logging.getLogger()
@@ -251,7 +247,7 @@ def selling(border):
             newPrice = str(temp_price - 2)
             logger.debug(f"New SELL price is {newPrice}, before user {username}")
             print(
-                f"New SELL price is - {newPrice}, before user {username}, minLim = {str(min_amount)}, maxLim = {str(max_amount)}")
+                f"New SELL price is - {newPrice}, before user {username}, minLim = {str(min_amount)}, maxLim = {str(max_amount)}  {datetime.datetime.now().strftime('%H:%M:%S %d.%m')}")
             lclbit.sendRequest(f'/api/ad-equation/{online_sell}/', params={'price_equation' : newPrice}, method='post')
             break
 
@@ -271,9 +267,7 @@ def chooseWorkType():   #User input function to define type of work
     pass
 
 """main"""
-newContacts = set()
-paymentCompletedList = set()
-buyerMessages = {}
+contactsDict = {}
 cardHolders = ['me', 'mom', 'almir', 'ayrat']
 workTypes = ['all', 'contacts', 'selling', 'scanning']
 if __name__ == "__main__":

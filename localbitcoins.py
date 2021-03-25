@@ -70,37 +70,9 @@ class LocalBitcoin:
     On success there's a complimentary message on the data key.
     """
 
-    def contactReleaseNew(self, contact_id):
-        endpoint = '/api/contact_release/' + contact_id + '/'
-        self.sendRequest(endpoint, '', 'post')
-
     def contactRelease(self, contact_id):
-        now = datetime.utcnow()
-        epoch = datetime.utcfromtimestamp(0)
-        delta = now - epoch
-        nonce = int(delta.total_seconds())
-
         endpoint = '/api/contact_release/' + contact_id + '/'
-        message = str(nonce) + self.hmac_auth_key + endpoint + ''
-        message_bytes = message.encode('utf-8')
-        signature = hmac.new(self.hmac_auth_secret.encode('utf-8'), msg=message_bytes,
-                             digestmod=hashlib.sha256).hexdigest().upper()
-
-        headers = {}
-        headers['Apiauth-key'] = self.hmac_auth_key
-        headers['Apiauth-Nonce'] = str(nonce)
-        headers['Apiauth-Signature'] = signature
-
-        response = requests.post(self.baseurl + endpoint, headers=headers, data='')
-        tries = 5
-        while int(response.status_code) != 200 and tries > 0:
-            time.sleep(5)
-            response = requests.post(self.baseurl + endpoint, headers=headers, data='')
-            tries -= 1
-            if tries == 0:
-                print("After 5 tries failed to do smth with params {0}".format(endpoint))
-
-        return (response.status_code, response.text)
+        return self.sendRequest(endpoint, '', 'post')
 
     """
     Releases the escrow of contact specified by ID {contact_id}.
@@ -302,17 +274,24 @@ class LocalBitcoin:
         if method == 'get':
             response = requests.get(self.baseurl + endpoint, headers=headers, params=params)
             js = json.loads(response.text)
-            if 'data' in js:
-                return js['data']
+            if response.status_code == 200:
+                if 'data' in js:
+                    return js['data']
             else:
-                print(datetime.now().strftime("%d.%m %H:%M:%S"), "Code 200 but nonce is bad, wait 1 sec...", '\n', js)
+                print(datetime.now().strftime("%d.%m %H:%M:%S"), endpoint, "GET ERROR, waiting 1sec...", '\n', js)
                 time.sleep(1.1)
                 return self.sendRequest(endpoint, params, 'get')
         elif method == 'post':
             response = requests.post(self.baseurl + endpoint, headers=headers, data=params)
             if response.status_code != 200:
-                print(response.status_code, response.text, "Tried nonce ", str(nonce), "sleeping 2secs")
-                time.sleep(2)
-                return self.sendRequest(endpoint, params, 'post')
-            else:
-                return (response.status_code, response.text)
+                js = json.loads(response.text)
+            #Different errors need different solutuions
+                print(datetime.now().strftime("%d.%m %H:%M:%S"), f"POST ERROR, wating 2sec\n{js}")
+                #CONTACTS RELEASE ERRORS
+                if js['error']['message'] == "This is not a valid and releasable contact" and js['error']['error_code'] == 6:
+                    # If contact is not releasable: contact is already released or contact is closed somehow else
+                    print(f"{endpoint} can't be released, wrong ID or already released.")
+                else:
+                    time.sleep(2)
+                    return self.sendRequest(endpoint, params, 'post')
+            return (response.status_code, response.text)

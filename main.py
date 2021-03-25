@@ -54,15 +54,15 @@ def getListOfBuyAds(myLimits=[10000, 50000]): #returns list of ads dictionary
     vals = []
     for ad in ads:
         ad = ad['data']
-        if ad['min_amount'] is None or ad['max_amount'] is None:
+        if ad['min_amount'] is None or ad['max_amount_available'] is None:
             continue
 
         #min_amount = float(ad['min_amount'])
-        max_amount = float(ad['max_amount'])
+        max_amount = float(ad['max_amount_available'])
         username = ad['profile']['username']
         if max_amount > myLimits[0] and username not in ignoreList: #can be improved
             if printCounter > 0:
-                logger.debug("BUY: {1} {0}".format(ad['temp_price'], username))
+                logger.debug(f"BUY: {ad['temp_price']} {username}")
                 printCounter -= 1
             vals.append(ad)
     return vals
@@ -71,21 +71,23 @@ def getListOfBuyAds(myLimits=[10000, 50000]): #returns list of ads dictionary
 def getListOfSellAdsPrices(adsAmount = 7): #returns list of float prices
     n = adsAmount
     vals = []
-    ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/sberbank/.json')
-    js = json.loads(ads.text)['data']['ad_list']
+    req = requests.get(lclbit.baseurl + '/buy-bitcoins-online/sberbank/.json')
+    while int(req.status_code != 200):
+        req = requests.get(lclbit.baseurl + '/buy-bitcoins-online/sberbank/.json')
+    js = json.loads(req.text)['data']['ad_list']
     for ad in js:
         ad = ad['data']
-        if ad['min_amount'] is None or ad['max_amount'] is None:
+        if ad['min_amount'] is None or ad['max_amount_available'] is None:
             continue
 
         min_amount = float(ad['min_amount'])
-        max_amount = float(ad['max_amount'])
+        max_amount = float(ad['max_amount_available'])
         temp_price = float(ad['temp_price'])
         username = ad['profile']['username']
-        if (min_amount <= 1500 and max_amount > 2000) and '+' in ad['profile']['trade_count'] and username not in botsList:
+        if min_amount <= 1500 and max_amount > 5000 and '+' in ad['profile']['trade_count'] and username not in botsList:
             if n>0:
                 #print(username, max_amount, end= " ")
-                logger.debug("SELL: {1} {0}".format(str(temp_price), username))
+                logger.debug(f"SELL: {str(temp_price)} {username}")
                 #print(bank_name, temp_price)
                 vals.append(temp_price)
                 n-=1
@@ -106,7 +108,7 @@ def countGoodPriceForBUY(sellPrices, buyPrices, spreadDif=20000, minDif=18000):
     disp = math.sqrt(disp)
 
     #print(medPrice, disp)
-    logger.debug("Calculated medprice = {0}, disp = {1}".format(medPrice, disp))
+    logger.debug(f"Calculated medprice = {medPrice}, disp = {disp}")
     resPrice = medPrice + disp - spreadDif
     if sellPrices[0] - resPrice < minDif:
         resPrice = sellPrices[0] - minDif
@@ -121,57 +123,63 @@ def countGoodPriceForBUY(sellPrices, buyPrices, spreadDif=20000, minDif=18000):
     }, method='post')
 
 def checkDashboardForNewContacts(msg, start=False):
+    for contact_id in contactsDict.keys():
+        # TESTING
+        if not contactsDict[contact_id]['closed']:
+            contactReq = lclbit.getContactInfo(contact_id)
+            if contactReq['closed_at']:
+                print(f"Contact {contact_id} is closed, dict updated")
+                contactsDict[contact_id]['closed'] = True
+
     dashBoard = lclbit.sendRequest('/api/dashboard/seller/', '', 'get')
     for contact in dashBoard['contact_list']:
-        contact_id = str(contact['data']['contact_id'])
-        paymentCompleted = contact['data']['payment_completed_at']
+        contact = contact['data']
+        contact_id = str(contact['contact_id'])
+        paymentCompleted = contact['payment_completed_at']
         if start == True:
-            newContacts.add(contact_id)
+            contactsDict[contact_id] = {
+                'sentCard' : True,
+                'askedFIO': True,
+                'closed' : False,
+                'payment_completed' : False,
+                'buyerMessages' : [],
+                'amount' : contact['amount']
+            }
             if paymentCompleted:
-                paymentCompletedList.add(contact_id)
+                contactsDict[contact_id]['payment_completed'] = True
         else:
-            if contact_id not in newContacts:
-                newContacts.add(contact_id)
-                print('New contact: ', contact_id)
+            if contact_id not in contactsDict:
+                contactsDict[contact_id] = {
+                    'sentCard': False,
+                    'askedFIO' : False,
+                    'closed': False,
+                    'payment_completed': False,
+                    'buyerMessages': [],
+                    'amount': contact['amount']
+                }
                 postMessageRequest = lclbit.postMessageToContact(contact_id, msg)
-            if paymentCompleted and contact_id not in paymentCompletedList:
-                paymentCompletedList.add(contact_id)
-                print('Payment completed: ', contact_id)
+                if postMessageRequest[0] == 200:
+                    contactsDict[contact_id]['sentCard'] = True #Changing dictionary only if message posting was succesful(code 200)
+                    print('New contact: ', contact_id)
+            if not contactsDict[contact_id]['closed'] and paymentCompleted:
+                contactsDict[contact_id]['payment_completed'] = True
 
-                #Ask for FIO
+                #Get user's mesggages and ask for FIO if needed
                 messageReq = lclbit.getContactMessages(contact_id)
                 messages = messageReq['message_list']
-                if len(messages) == 1:
-                    lclbit.postMessageToContact(contact_id, message=askForFIOMessage)
+                contactsDict[contact_id]['buyerMessages'] = [msg['msg'] for msg in messages if msg['sender']['username'] != myUserName]
+                if not contactsDict[contact_id]['askedFIO'] and len(contactsDict[contact_id]['buyerMessages']) == 0:
+                    #There could be better way of determining if user sent his name
+                    if lclbit.postMessageToContact(contact_id, message=askForFIOMessage)[0] == 200:
+                        contactsDict[contact_id]['askedFIO'] = True #Changing dictionary only if message posting was succesful(code 200)
+
+    completedPayments = [[id, data['amount'], data['buyerMessages']] for id, data in contactsDict.items() if not data['closed'] and data['payment_completed']]
+    if len(completedPayments) > 0:
+        print("Completed payments:\n", " ".join([completedPayment[0] for completedPayment in completedPayments]))
+        for elem in completedPayments:
+            print(f"{elem[0]} - {elem[1]} RUB, msgs: {elem[2]}")
+    #print(json.dumps(contactsDict, indent=4))
         #newContacts = newContacts & set(dashBoard)
-
-def paymentCompletedContactsControl():
-    for contact_id in paymentCompletedList.copy():
-        curContact = lclbit.sendRequest('/api/contact_info/{0}/'.format(contact_id), '', 'get')
-
-        buyerName = curContact['buyer']['username']
-        amount = curContact['amount']
-        messageReq = lclbit.getContactMessages(contact_id)
-
-        messages = messageReq['message_list']
-        if contact_id in buyerMessages and buyerMessages[contact_id][3] is True:
-            buyerMessages[contact_id] = [buyerName, amount, [], True]
-        else:
-            buyerMessages[contact_id] = [buyerName, amount, [], False]
-        for msg in messages:
-            if msg['sender']['username'] == buyerName:
-                buyerMessages[contact_id][2].append(msg['msg'])
-        buyerDidntWriteAnything = len(buyerMessages[contact_id][2]) == 0
-        askedForFIO = buyerMessages[contact_id][3]
-        if buyerDidntWriteAnything and not askedForFIO:
-            buyerMessages[contact_id][3] = True
-            lclbit.postMessageToContact(contact_id, message=askForFIOMessage)
-
-        #Print info about new contacts
-        logger.debug("Some payments are ready")
-        for id, value in buyerMessages.items():
-            logger.debug("{0} : {1}".format(id, value))
-            print("Payment is ready", id, value)
 
 def releaseContactInput(buyerMessages, timer = 10):
     while True:
@@ -188,16 +196,6 @@ def releaseContactInput(buyerMessages, timer = 10):
                     print("Couldn't release contact {0} status code - {1}\nCheck id".format(contact, req[0]))
                 time.sleep(3)
         time.sleep(timer)
-
-def clearOldContactsFromList(*lists):
-    for lst in list(lists):
-        for contact_id in lst.copy():
-            req = lclbit.sendRequest('/api/contact_info/{0}/'.format(contact_id), '', 'get')
-            st_code = req[0]
-            while int(st_code) != 200:
-                req = lclbit.sendRequest('/api/contact_info/{0}/'.format(contact_id), '', 'get')
-            if contact_id in lst and req[1]['closed_at'] is not None:
-                lst.discard(contact_id)
 
 def get_logger():
     logger = logging.getLogger()
@@ -222,40 +220,35 @@ def executeAll(spreadDif=21000):
     countGoodPriceForBUY(sell_Ads, buy_Ads, spreadDif=spreadDif, minDif=19500)
 
 #Developing
-def selling():
-    ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/ru/russian-federation/transfers-with-specific-bank/.json')
+def selling(border):
+    ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/sberbank/.json')
     st_code = ads.status_code
     while int(st_code) != 200:
         print("Couldn't get ads. Code:", ads.status_code, ads.text, "trying to get ads again...")
         time.sleep(1)
-        ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/ru/russian-federation/transfers-with-specific-bank/.json')
+        ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/sberbank/.json')
     js = json.loads(ads.text)['data']['ad_list']
-    my_price = 0
+    myPrice = 0
     for ad in js:
         ad = ad['data']
-        if ad['min_amount'] is None or ad['max_amount'] is None:
+        if ad['min_amount'] is None or ad['max_amount_available'] is None:
             continue
-        bank_name = ad['bank_name'].upper()
-        # Check if bankName is Sberbank
-        goodBankRegExp = checkForBankNamesRegularExpression(bank_name)
         min_amount = float(ad['min_amount'])
-        max_amount = float(ad['max_amount'])
+        max_amount = float(ad['max_amount_available'])
         temp_price = float(ad['temp_price'])
         username = ad['profile']['username']
-        if goodBankRegExp:
-            logger.debug("{0} - {1}".format(username, bank_name));
         if username == myUserName:
-            my_price = temp_price
+            myPrice = temp_price
             continue
-        elif goodBankRegExp and min_amount <= 1500 and max_amount >= 1000 and '+' in ad['profile']['trade_count'] \
-                and  (my_price - temp_price == -5) and username not in botsList:
-            break
-        elif goodBankRegExp and min_amount <= 1500 and max_amount >= 1000 and '+' in ad['profile']['trade_count'] \
-                and (my_price - temp_price != -5) and username not in botsList:
-            newPrice = str(math.ceil(temp_price - 5))
-            lclbit.sendRequest('/api/ad-equation/{}/'.format(online_sell), params={'price_equation' : newPrice}, method='post')
-            logger.debug("New SELL price is {0}, before user {1}".format(newPrice, username))
-            print("New SELL price is - {0}, before user - {1}".format(newPrice, username))
+        elif min_amount <= 1500 and max_amount >= 5000 and '+' in ad['profile']['trade_count'] and username not in botsList and temp_price > border:
+            if myPrice < temp_price and temp_price - myPrice == 2:
+                break
+            logger.debug(f"{username} - {temp_price}")
+            newPrice = str(temp_price - 2)
+            logger.debug(f"New SELL price is {newPrice}, before user {username}")
+            print(
+                f"New SELL price is - {newPrice}, before user {username}, minLim = {str(min_amount)}, maxLim = {str(max_amount)}  {datetime.datetime.now().strftime('%H:%M:%S %d.%m')}")
+            lclbit.sendRequest(f'/api/ad-equation/{online_sell}/', params={'price_equation' : newPrice}, method='post')
             break
 
 def scanning():
@@ -270,11 +263,11 @@ def scanning():
     if curDifference > 105000:
         winsound.MessageBeep()
 
+def chooseWorkType():   #User input function to define type of work
+    pass
 
 """main"""
-newContacts = set()
-paymentCompletedList = set()
-buyerMessages = {}
+contactsDict = {}
 cardHolders = ['me', 'mom', 'almir', 'ayrat']
 workTypes = ['all', 'contacts', 'selling', 'scanning']
 if __name__ == "__main__":
@@ -315,11 +308,12 @@ if __name__ == "__main__":
                 while time.time() < time.time() + workTime:
                     checkDashboardForNewContacts(sberMessage)
             elif workType == 'selling':
+                sellBorder = float(input("Sell border: "))
                 while time.time() < time.time() + workTime:
-                    selling()
+                    selling(sellBorder)
                     time.sleep(1)
                     checkDashboardForNewContacts(sberMessage)
-                    time.sleep(1)
+                    time.sleep(2)
             elif workType == "scanning":
                 while time.time() < time.time() + workTime:
                     scanning()
