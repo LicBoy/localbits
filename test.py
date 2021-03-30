@@ -1,4 +1,5 @@
 from localbits.localbitcoins import LocalBitcoin
+from localbits.lclbitcoinsTelegramBot import TelegramBot
 import requests, json
 import math
 import time, datetime           # for logging
@@ -14,6 +15,7 @@ online_sell = tokens.online_sell     #YOU SELL HERE
 myUserName = tokens.myUserName
 
 lclbit = LocalBitcoin(key, secret)
+telegramBot = TelegramBot(tokens.telegramBotToken, tokens.telegramChatID, lclbit)
 
 #Regular expressions for Banks: Sber, Tink, Alpha, VTB, Roket, Raif
 regExpSber = r'[$SCСĊⓈĆ₡℃∁ℭŠṠṢṤṦṨ][\W\d_]*[BБ6Ⓑ൫ℬḂḄḆ][\W\d_]*[EЕĖⒺĘḔḖḘḚḜẸẺẼẾỀỂỄỆῈΈἘἙἚἛἜἝ3][\W\d_]*[RPРℙⓇṖṖῬṔℛℜℝ℟ṘṚṜṞ]'
@@ -44,7 +46,7 @@ def checkForBankNamesRegularExpression(bank_name):
     return (reSearchSber and not reSearchVtb and not reSearchAlpha and not reSearchRoket and not reSearchTink and not reSearchRaif)
 
 #Get ads from online_buy category, U BUY HERE
-def getListOfBuyAds(myLimits=[10000, 50000]): #returns list of ads dictionary
+def getListOfBuyAds(myLimits=[10000, 50000]): #returns list of dictionaried ads
     req = requests.get(lclbit.baseurl + '/sell-bitcoins-online/sberbank/.json')
     while int(req.status_code) != 200:
         req = requests.get(lclbit.baseurl + '/sell-bitcoins-online/sberbank/.json')
@@ -123,13 +125,12 @@ def countGoodPriceForBUY(sellPrices, buyPrices, spreadDif=20000, minDif=18000):
     }, method='post')
 
 def checkDashboardForNewContacts(msg, start=False):
-    for contact_id in contactsDict.keys():
-        # TESTING
+    for contact_id in list(contactsDict):
         if not contactsDict[contact_id]['closed']:
             contactReq = lclbit.getContactInfo(contact_id)
             if contactReq['closed_at']:
                 print(f"Contact {contact_id} is closed, dict updated")
-                contactsDict[contact_id]['closed'] = True
+                del contactsDict[contact_id]
 
     dashBoard = lclbit.sendRequest('/api/dashboard/seller/', '', 'get')
     for contact in dashBoard['contact_list']:
@@ -175,27 +176,12 @@ def checkDashboardForNewContacts(msg, start=False):
 
     completedPayments = [[id, data['amount'], data['buyerMessages']] for id, data in contactsDict.items() if not data['closed'] and data['payment_completed']]
     if len(completedPayments) > 0:
+        #telegramBot.generateReplyKeyboard(contactsDict)
         print("Completed payments:\n", " ".join([completedPayment[0] for completedPayment in completedPayments]))
         for elem in completedPayments:
             print(f"{elem[0]} - {elem[1]} RUB, msgs: {elem[2]}")
     #print(json.dumps(contactsDict, indent=4))
         #newContacts = newContacts & set(dashBoard)
-
-def releaseContactInput(buyerMessages, timer = 10):
-    while True:
-        if len(buyerMessages) > 0:
-            contactsToRelease = input("Enter ids to release:\n").split()
-            for contact in contactsToRelease:
-                #Release contact
-                req = lclbit.contactRelease(contact)
-                if int(req[0]) == 200:
-                    print("{0} contact was released".format(contact))
-                    logger.debug("{0} contact was released".format(contact))
-                    buyerMessages.pop(contact, None)
-                else:
-                    print("Couldn't release contact {0} status code - {1}\nCheck id".format(contact, req[0]))
-                time.sleep(3)
-        time.sleep(timer)
 
 def get_logger():
     logger = logging.getLogger()
@@ -222,8 +208,7 @@ def executeAll(spreadDif=21000):
 #Developing
 def selling(border):
     ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/sberbank/.json')
-    st_code = ads.status_code
-    while int(st_code) != 200:
+    while int(ads.status_code) != 200:
         print("Couldn't get ads. Code:", ads.status_code, ads.text, "trying to get ads again...")
         time.sleep(1)
         ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/sberbank/.json')
@@ -297,6 +282,8 @@ if __name__ == "__main__":
     logger = get_logger()
     while True:
         try:
+            telegramBot.main()
+            telegramBot.updater.start_polling()
             with open('logs.log', 'w'): pass #Clearing log file
             workTime = 80000
             checkDashboardForNewContacts(sberMessage, start=True)
@@ -311,9 +298,8 @@ if __name__ == "__main__":
                 sellBorder = float(input("Sell border: "))
                 while time.time() < time.time() + workTime:
                     selling(sellBorder)
-                    time.sleep(1)
                     checkDashboardForNewContacts(sberMessage)
-                    time.sleep(2)
+                    time.sleep(5)
             elif workType == "scanning":
                 while time.time() < time.time() + workTime:
                     scanning()

@@ -123,13 +123,12 @@ def countGoodPriceForBUY(sellPrices, buyPrices, spreadDif=20000, minDif=18000):
     }, method='post')
 
 def checkDashboardForNewContacts(msg, start=False):
-    for contact_id in contactsDict.keys():
-        # TESTING
+    for contact_id in list(contactsDict):
         if not contactsDict[contact_id]['closed']:
             contactReq = lclbit.getContactInfo(contact_id)
             if contactReq['closed_at']:
                 print(f"Contact {contact_id} is closed, dict updated")
-                contactsDict[contact_id]['closed'] = True
+                del contactsDict[contact_id]
 
     dashBoard = lclbit.sendRequest('/api/dashboard/seller/', '', 'get')
     for contact in dashBoard['contact_list']:
@@ -178,8 +177,6 @@ def checkDashboardForNewContacts(msg, start=False):
         print("Completed payments:\n", " ".join([completedPayment[0] for completedPayment in completedPayments]))
         for elem in completedPayments:
             print(f"{elem[0]} - {elem[1]} RUB, msgs: {elem[2]}")
-    #print(json.dumps(contactsDict, indent=4))
-        #newContacts = newContacts & set(dashBoard)
 
 def releaseContactInput(buyerMessages, timer = 10):
     while True:
@@ -222,10 +219,9 @@ def executeAll(spreadDif=21000):
 #Developing
 def selling(border):
     ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/sberbank/.json')
-    st_code = ads.status_code
-    while int(st_code) != 200:
+    while int(ads.status_code) != 200:
         print("Couldn't get ads. Code:", ads.status_code, ads.text, "trying to get ads again...")
-        time.sleep(1)
+        time.sleep(5)
         ads = requests.get(lclbit.baseurl + '/buy-bitcoins-online/sberbank/.json')
     js = json.loads(ads.text)['data']['ad_list']
     myPrice = 0
