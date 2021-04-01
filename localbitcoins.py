@@ -273,12 +273,12 @@ class LocalBitcoin:
 
         if method == 'get':
             response = requests.get(self.baseurl + endpoint, headers=headers, params=params)
-            js = json.loads(response.text)
             if response.status_code == 200:
+                js = json.loads(response.text)
                 if 'data' in js:
                     return js['data']
             else:
-                print(datetime.now().strftime("%d.%m %H:%M:%S"), endpoint, "GET ERROR, waiting 1sec...", '\n', js)
+                print(datetime.now().strftime("%d.%m %H:%M:%S"), endpoint, "GET ERROR, waiting 1sec...", '\n', response.text)
                 time.sleep(1.1)
                 return self.sendRequest(endpoint, params, 'get')
         elif method == 'post':

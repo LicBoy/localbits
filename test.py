@@ -132,6 +132,23 @@ def checkDashboardForNewContacts(msg, start=False):
                 print(f"Contact {contact_id} is closed, dict updated")
                 del contactsDict[contact_id]
 
+    completedPayments = {}
+    for id, data in contactsDict.items():
+        if not data['closed'] and data['payment_completed']:
+            completedPayments[id] = {
+                'amount' : data['amount'],
+                'buyerMessages' : data['buyerMessages'],
+            }
+
+    if len(completedPayments) > 0:
+        telegramBot.sendPaymentCompletedMessage(completedPayments)
+        print("Completed payments:\n", " ".join([completedPayment for completedPayment in completedPayments]))
+        for elem in completedPayments:
+            buyerMsgs = ", ".join(completedPayments[elem]['buyerMessages'])
+            print(f"{elem} - {completedPayments[elem]['amount']} RUB, msgs: {buyerMsgs}")
+    else:
+        telegramBot.contactsRegex = r'(^All$)|'
+
     dashBoard = lclbit.sendRequest('/api/dashboard/seller/', '', 'get')
     for contact in dashBoard['contact_list']:
         contact = contact['data']
@@ -174,14 +191,6 @@ def checkDashboardForNewContacts(msg, start=False):
                     if lclbit.postMessageToContact(contact_id, message=askForFIOMessage)[0] == 200:
                         contactsDict[contact_id]['askedFIO'] = True #Changing dictionary only if message posting was succesful(code 200)
 
-    completedPayments = [[id, data['amount'], data['buyerMessages']] for id, data in contactsDict.items() if not data['closed'] and data['payment_completed']]
-    if len(completedPayments) > 0:
-        #telegramBot.generateReplyKeyboard(contactsDict)
-        print("Completed payments:\n", " ".join([completedPayment[0] for completedPayment in completedPayments]))
-        for elem in completedPayments:
-            print(f"{elem[0]} - {elem[1]} RUB, msgs: {elem[2]}")
-    #print(json.dumps(contactsDict, indent=4))
-        #newContacts = newContacts & set(dashBoard)
 
 def get_logger():
     logger = logging.getLogger()
@@ -282,7 +291,6 @@ if __name__ == "__main__":
     logger = get_logger()
     while True:
         try:
-            telegramBot.main()
             telegramBot.updater.start_polling()
             with open('logs.log', 'w'): pass #Clearing log file
             workTime = 80000
@@ -298,8 +306,8 @@ if __name__ == "__main__":
                 sellBorder = float(input("Sell border: "))
                 while time.time() < time.time() + workTime:
                     selling(sellBorder)
+                    time.sleep(2)
                     checkDashboardForNewContacts(sberMessage)
-                    time.sleep(5)
             elif workType == "scanning":
                 while time.time() < time.time() + workTime:
                     scanning()
