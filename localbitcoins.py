@@ -71,7 +71,7 @@ class LocalBitcoin:
     """
 
     def contactRelease(self, contact_id):
-        endpoint = '/api/contact_release/' + contact_id + '/'
+        endpoint = f'/api/contact_release/{contact_id}/'
         return self.sendRequest(endpoint, '', 'post')
 
     """
@@ -168,10 +168,14 @@ class LocalBitcoin:
     Returns maximum of 50 newest trade messages.
     Messages are ordered by sending time, and the newest one is first.
     The list has same format as /api/contact_messages/, but each message has also contact_id field.
+    Optional parameter "after" shows messages after a specific date. It takes UTC date in ISO 8601 format.
     """
 
-    def getRecentMessages(self):
-        return self.sendRequest('/api/recent_messages/', '', 'get')
+    def getRecentMessages(self, after = None):
+        params = ''
+        if after is not None:
+            params = {'after': after}
+        return self.sendRequest('/api/recent_messages/', params, 'get')
 
     """
     Gives feedback to user.
@@ -246,16 +250,25 @@ class LocalBitcoin:
     Refer to the ad editing pages for the field meanings. List item structure is like so:
     """
 
-    def getOwnAds(self):
-        return self.sendRequest('/api/ads/', '', 'post')
+    def getOwnAds(self, visible : bool = None, trade_type : str = None, currency : str = None, countrycode : str = None):
+        paramsDict = {}
+        if visible is not None: paramsDict['visible'] = visible
+        if trade_type is not None: paramsDict['trade_type'] = trade_type
+        if currency is not None: paramsDict['currency'] = currency
+        if countrycode is not None: paramsDict['countrycode'] = visible
+        return self.sendRequest('/api/ads/', paramsDict, 'get')
 
+    def getSeveralAds(self, *args):
+        adsArgs = ",".join(args)
+        return self.sendRequest(endpoint='/api/ad-get/', params={'ads' : adsArgs}, method='get')['ad_list']
+
+    def getOwnAdInfo(self, adID):
+        return self.sendRequest(f'/api/ad-get/{adID}/', '', 'get')['ad_list'][0]['data']
 
     def sendRequest(self, endpoint, params, method):    #Base function
         params_encoded = ''
         if params != '':
             params_encoded = urllib.parse.urlencode(params)
-            if method == 'get':
-                params_encoded = '?' + params_encoded
 
         now = datetime.utcnow()
         epoch = datetime.utcfromtimestamp(0)
@@ -272,14 +285,15 @@ class LocalBitcoin:
         headers['Apiauth-Signature'] = signature
 
         if method == 'get':
-            response = requests.get(self.baseurl + endpoint, headers=headers, params=params)
+            response = requests.get(self.baseurl + endpoint, headers=headers, params=params_encoded)
             if response.status_code == 200:
                 js = json.loads(response.text)
                 if 'data' in js:
                     return js['data']
             else:
-                print(datetime.now().strftime("%d.%m %H:%M:%S"), endpoint, "GET ERROR, waiting 1sec...", '\n', response.text)
-                time.sleep(1.1)
+                js = json.loads(response.text)
+                print(datetime.now().strftime("%d.%m %H:%M:%S"), endpoint, "GET ERROR, waiting 1sec...", '\n', response.text, "\n", js)
+                time.sleep(5)
                 return self.sendRequest(endpoint, params, 'get')
         elif method == 'post':
             response = requests.post(self.baseurl + endpoint, headers=headers, data=params)

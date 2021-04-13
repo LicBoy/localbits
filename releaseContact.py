@@ -5,6 +5,12 @@ import time, datetime
 lclbit = LocalBitcoin(key, secret)
 
 if __name__ == '__main__':
+    curDate = datetime.datetime.now().isoformat()
+    #print(time.time())
+    #date = datetime.datetime.fromtimestamp(time.time() - 172800)
+    #print(lclbit.getRecentMessages(date))
+    print(lclbit.getSeveralAds('1257933', '1262102'))
+    #print(lclbit.getOwnAds(trade_type="ONLINE_BUY"))
     while True:
         try:
             contactsToRelease = set(input("Input contacts to release:\n").split())

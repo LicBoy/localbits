@@ -32,9 +32,9 @@ almirSberCardMessage = tokens.almirSberCardMessage
 askForFIOMessage = 'фио?'
 
 #IGNORE this users
-ignoreList = ['Nikitakomp7', 'Ellenna', 'DmitriiGrom']      #They usually invisible on BUY page
+ignoreList = ['Nikitakomp7', 'Ellenna', 'DmitriiGrom']                  #They usually invisible on BUY page
 botsList = ['13_drunk_soul_13', 'Klaik', 'Slonya', 'DmitriiGrom']        #They are bots on SELL page
-scanningShitList = ['DmitriiGrom']
+invisibleList = ['erikdar7777']
 
 def checkForBankNamesRegularExpression(bank_name):
     reSearchSber = re.search(regExpSber, bank_name)
@@ -90,12 +90,11 @@ def getListOfSellAdsPrices(adsAmount = 7): #returns list of float prices
             if n>0:
                 #print(username, max_amount, end= " ")
                 logger.debug(f"SELL: {str(temp_price)} {username}")
-                #print(bank_name, temp_price)
                 vals.append(temp_price)
                 n-=1
             else:
                 return vals
-    #Return top 7 sell ads from 1st page
+    #Return top 7 or less sell ads from 1st page
     return vals
 
 def countGoodPriceForBUY(sellPrices, buyPrices, spreadDif=20000, minDif=18000):
@@ -121,14 +120,14 @@ def countGoodPriceForBUY(sellPrices, buyPrices, spreadDif=20000, minDif=18000):
             break
     resPrice = math.ceil(resPrice)
     print("Counted price:", resPrice)
-    lclbit.sendRequest('/api/ad-equation/{0}/'.format(online_buy), params={'price_equation': str(resPrice)
+    lclbit.sendRequest(f'/api/ad-equation/{online_buy}/', params={'price_equation': str(resPrice)
     }, method='post')
 
 def checkDashboardForNewContacts(msg, start=False):
     for contact_id in list(contactsDict):
         if not contactsDict[contact_id]['closed']:
             contactReq = lclbit.getContactInfo(contact_id)
-            if contactReq['closed_at']:
+            if contactReq['closed_at'] or contactReq['disputed_at']:
                 print(f"Contact {contact_id} is closed, dict updated")
                 del contactsDict[contact_id]
 
@@ -141,7 +140,11 @@ def checkDashboardForNewContacts(msg, start=False):
             }
 
     if len(completedPayments) > 0:
-        telegramBot.sendPaymentCompletedMessage(completedPayments)
+        try:
+            telegramBot.sendPaymentCompletedMessage(completedPayments)
+        except Exception as exc:
+            print("Connection ERROR with telegramBot, probably connection timeout.")
+            telegramBot.sendPaymentCompletedMessage(completedPayments)
         print("Completed payments:\n", " ".join([completedPayment for completedPayment in completedPayments]))
         for elem in completedPayments:
             buyerMsgs = ", ".join(completedPayments[elem]['buyerMessages'])
@@ -206,8 +209,8 @@ def get_logger():
 
 def executeAll(spreadDif=21000):
     #Getting needed info---
-    myBuyAdd = lclbit.sendRequest('/api/ad-get/{0}/'.format(online_buy), '', 'get')['ad_list'][0]['data']
-    #mySellAdd = lclbit.sendRequest('/api/ad-get/{0}/'.format(online_sell), '', 'get')['ad_list'][0]['data']
+    myBuyAdd = lclbit.getOwnAdInfo(online_buy)
+    #mySellAdd = lclbit.getOwnAdInfo(online_sell)
     myLimits = [float(myBuyAdd['min_amount']) , float(myBuyAdd['max_amount'])]
     #---------
     sell_Ads = getListOfSellAdsPrices(adsAmount=5)
@@ -234,7 +237,7 @@ def selling(border):
         if username == myUserName:
             myPrice = temp_price
             continue
-        elif min_amount <= 1500 and max_amount >= 5000 and '+' in ad['profile']['trade_count'] and username not in botsList and temp_price > border:
+        elif min_amount <= 2500 and max_amount >= 5000 and '+' in ad['profile']['trade_count'] and username not in invisibleList and temp_price > border:
             if myPrice < temp_price and temp_price - myPrice == 2:
                 break
             logger.debug(f"{username} - {temp_price}")
@@ -288,6 +291,7 @@ if __name__ == "__main__":
         if workType in workTypes:
             break
 
+    sellBorder = -1
     logger = get_logger()
     while True:
         try:
@@ -303,10 +307,11 @@ if __name__ == "__main__":
                 while time.time() < time.time() + workTime:
                     checkDashboardForNewContacts(sberMessage)
             elif workType == 'selling':
-                sellBorder = float(input("Sell border: "))
+                if sellBorder == -1:
+                    sellBorder = float(input("Sell border: "))
                 while time.time() < time.time() + workTime:
                     selling(sellBorder)
-                    time.sleep(2)
+                    time.sleep(5)
                     checkDashboardForNewContacts(sberMessage)
             elif workType == "scanning":
                 while time.time() < time.time() + workTime:
