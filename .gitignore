@@ -1,5 +1,5 @@
 tokens.py
 execution.py
 multiprocessTesting.py
-logs.log
+*.log
 __pycache__
