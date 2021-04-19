@@ -90,12 +90,11 @@ def getListOfSellAdsPrices(adsAmount = 7): #returns list of float prices
             if n>0:
                 #print(username, max_amount, end= " ")
                 logger.debug(f"SELL: {str(temp_price)} {username}")
-                #print(bank_name, temp_price)
                 vals.append(temp_price)
                 n-=1
             else:
                 return vals
-    #Return top 7 sell ads from 1st page
+    #Return top 7 or less sell ads from 1st page
     return vals
 
 def countGoodPriceForBUY(sellPrices, buyPrices, spreadDif=20000, minDif=18000):
@@ -121,14 +120,14 @@ def countGoodPriceForBUY(sellPrices, buyPrices, spreadDif=20000, minDif=18000):
             break
     resPrice = math.ceil(resPrice)
     print("Counted price:", resPrice)
-    lclbit.sendRequest('/api/ad-equation/{0}/'.format(online_buy), params={'price_equation': str(resPrice)
+    lclbit.sendRequest(f'/api/ad-equation/{online_buy}/', params={'price_equation': str(resPrice)
     }, method='post')
 
 def checkDashboardForNewContacts(msg, start=False):
     for contact_id in list(contactsDict):
         if not contactsDict[contact_id]['closed']:
             contactReq = lclbit.getContactInfo(contact_id)
-            if contactReq['closed_at']:
+            if contactReq['closed_at'] or contactReq['disputed_at']:
                 print(f"Contact {contact_id} is closed, dict updated")
                 del contactsDict[contact_id]
 
@@ -161,7 +160,7 @@ def checkDashboardForNewContacts(msg, start=False):
         if start == True:
             contactsDict[contact_id] = {
                 'sentCard' : True,
-                'askedFIO': False,
+                'askedFIO': True,
                 'closed' : False,
                 'payment_completed' : False,
                 'buyerMessages' : [],
@@ -209,11 +208,11 @@ def get_logger():
     return logger
 
 def executeAll(spreadDif=21000):
-    #Getting needed info---
-    myBuyAdd = lclbit.sendRequest('/api/ad-get/{0}/'.format(online_buy), '', 'get')['ad_list'][0]['data']
-    #mySellAdd = lclbit.sendRequest('/api/ad-get/{0}/'.format(online_sell), '', 'get')['ad_list'][0]['data']
+    # Getting needed info---
+    myBuyAdd = lclbit.getAdInfo(online_buy)
+    #mySellAdd = lclbit.getOwnAdInfo(online_sell)
     myLimits = [float(myBuyAdd['min_amount']) , float(myBuyAdd['max_amount'])]
-    #---------
+    # ---------
     sell_Ads = getListOfSellAdsPrices(adsAmount=5)
     buy_Ads = getListOfBuyAds(myLimits)
     countGoodPriceForBUY(sell_Ads, buy_Ads, spreadDif=spreadDif, minDif=19500)

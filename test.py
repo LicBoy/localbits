@@ -208,11 +208,11 @@ def get_logger():
     return logger
 
 def executeAll(spreadDif=21000):
-    #Getting needed info---
-    myBuyAdd = lclbit.getOwnAdInfo(online_buy)
+    # Getting needed info---
+    myBuyAdd = lclbit.getAdInfo(online_buy)
     #mySellAdd = lclbit.getOwnAdInfo(online_sell)
     myLimits = [float(myBuyAdd['min_amount']) , float(myBuyAdd['max_amount'])]
-    #---------
+    # ---------
     sell_Ads = getListOfSellAdsPrices(adsAmount=5)
     buy_Ads = getListOfBuyAds(myLimits)
     countGoodPriceForBUY(sell_Ads, buy_Ads, spreadDif=spreadDif, minDif=19500)

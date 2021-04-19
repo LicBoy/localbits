@@ -250,7 +250,7 @@ class LocalBitcoin:
     Refer to the ad editing pages for the field meanings. List item structure is like so:
     """
 
-    def getOwnAds(self, visible : bool = None, trade_type : str = None, currency : str = None, countrycode : str = None):
+    def getAllAds(self, visible : bool = None, trade_type : str = None, currency : str = None, countrycode : str = None):
         paramsDict = {}
         if visible is not None: paramsDict['visible'] = visible
         if trade_type is not None: paramsDict['trade_type'] = trade_type
@@ -258,12 +258,42 @@ class LocalBitcoin:
         if countrycode is not None: paramsDict['countrycode'] = visible
         return self.sendRequest('/api/ads/', paramsDict, 'get')
 
+    """
+    Returns all advertisements from a comma-separated list of ad IDs. 
+    Invalid advertisement ID's are ignored and no error is returned. 
+    Otherwise it functions the same as /api/ad-get/{ad_id}/.
+    """
+
     def getSeveralAds(self, *args):
         adsArgs = ",".join(args)
         return self.sendRequest(endpoint='/api/ad-get/', params={'ads' : adsArgs}, method='get')['ad_list']
 
-    def getOwnAdInfo(self, adID):
-        return self.sendRequest(f'/api/ad-get/{adID}/', '', 'get')['ad_list'][0]['data']
+    """
+    Get info about one AD, specifying or not Fields, which you want to get. If fields parameter is empty, all fields are returned.
+    Use a request parameter of fields, which is a comma-separated list of field names.
+    Only those fields will be returned in the data.
+    """
+
+    def getAdInfo(self, adID, *args):
+        adFields = ",".join(args)
+        return self.sendRequest(endpoint=f'/api/ad-get/{adID}/', params={'fields' : adFields}, method='get')['ad_list'][0]['data']
+
+    """
+    Get info about several ads, which are contained in first List argument with specifying fields parameter.
+    Fields are contained in second List parameter.
+    """
+
+    def getFieldsOfSeveralAds(self, adsList : list, fieldsList : list):
+        adsArgs = ",".join(adsList)
+        fieldsArgs = ",".join(fieldsList)
+        return self.sendRequest(endpoint='/api/ad-get/', params={'ads' : adsArgs, 'fields' : fieldsArgs}, method='get')
+
+    """
+    Base function of making requests with needed encoded info:
+    Apiauth-Key: HMAC authentication key that you got when you created your HMAC authentication from the Apps dashboard.
+    Apiauth-Nonce: A unique number given with each API request. It's value needs to be greater with each API request.
+    Apiauth-Signature: Your API request signed with your HMAC secret that you got when you create your HMAC authentication from the Apps dashboard.
+    """
 
     def sendRequest(self, endpoint, params, method):    #Base function
         params_encoded = ''
@@ -273,7 +303,7 @@ class LocalBitcoin:
         now = datetime.utcnow()
         epoch = datetime.utcfromtimestamp(0)
         delta = now - epoch
-        nonce = int(delta.total_seconds())
+        nonce = round((delta.total_seconds()) * 1000)
 
         message = str(nonce) + self.hmac_auth_key + endpoint + params_encoded
         message_bytes = message.encode('utf-8')
@@ -300,7 +330,7 @@ class LocalBitcoin:
             if response.status_code != 200:
                 js = json.loads(response.text)
             #Different errors need different solutuions
-                print(datetime.now().strftime("%d.%m %H:%M:%S"), f"POST ERROR, wating 2sec\n{js}")
+                print(datetime.now().strftime("%d.%m %H:%M:%S"), endpoint, f"POST ERROR, wating 2sec\n{js}")
                 #CONTACTS RELEASE ERRORS
                 if js['error']['message'] == "This is not a valid and releasable contact" and js['error']['error_code'] == 6:
                     # If contact is not releasable: contact is already released or contact is closed somehow else
