@@ -75,13 +75,14 @@ class TelegramBot:
         self.releaseDict = dict
         botText = "Some payments are ready:\n"
         self.contactsRegex = r'(^All$)|'
+        successfullyReleasedContacts = set()
         for key in list(self.releaseDict):
             curKeyRegExp = f"(^{key}$)|"
             self.contactsRegex += curKeyRegExp
             botText += str(f"<b>{key}</b> - <b>{self.releaseDict[key]['amount']}</b>RUB - " + "; ".join(self.releaseDict[key]['buyerMessages']) + "\n")
         self.contactsRegex = self.contactsRegex[:-1]
 
-        bitcoinBalance = self.localBitcoinObject.getWallet()['total']['balance']
+        bitcoinBalance = self.localBitcoinObject.getWalletBalance()['total']['balance']
         botText += f"\nBalance: <strong>{bitcoinBalance}</strong> BTC."
         self.dispatcher.add_handler(MessageHandler(Filters.regex(self.contactsRegex), self.chooseContactsToRelease))
         self.updater.bot.send_message(self.chatID, text=botText, reply_markup=self.generateReplyKeyboard(dict), parse_mode=ParseMode.HTML)
@@ -116,7 +117,6 @@ class TelegramBot:
         if st_code == 200:
             reply_text = f"Contact {contactID} release - success✅!"
             del self.releaseDict[contactID]
-            #del self.localBitcoinObject.contacts
         else:
             reply_text = f"Contact {contactID} release - fail❌!"
         self.updater.bot.delete_message(chat_id=self.chatID, message_id=messageID)
@@ -129,6 +129,7 @@ class TelegramBot:
     """
     def adsStatus(self, update, context):
         adsDict = self.localBitcoinObject.getSeveralAds(online_buy, online_sell)
+        bitcoinBalance = self.localBitcoinObject.getWalletBalance()['total']['balance']
         text = ""
         for ad in adsDict:
             ad = ad['data']
@@ -138,6 +139,7 @@ class TelegramBot:
             if ad['trade_type'] == 'ONLINE_SELL': text += '<b>Selling</b>'
             else: text += '<b>Buying</b>'
             text += f' | Limits: {int(float(ad["min_amount"]))} - {int(float(ad["max_amount_available"]))}\n'
+        text += f"\nBalance: <strong>{bitcoinBalance}</strong> BTC."
         self.updater.bot.send_message(update.message.chat_id, text, parse_mode=ParseMode.HTML)
 
     """
@@ -210,7 +212,7 @@ class TelegramBot:
 
     """
     TODO: Change ads' prices or price changing algorithm.
-    Probably useless.
+    Probably useless.Ad
     """
     def changeAdPrice(self, update, context):
         userArgs = " ".join(context.args)
