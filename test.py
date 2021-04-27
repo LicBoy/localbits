@@ -126,36 +126,30 @@ class LocalBitcoinBot:
                 resPrice = float(ad['temp_price']) + 2
                 break
         resPrice = math.ceil(resPrice)
-        print("Counted price:", resPrice)
+        print(f"New SELL price is - {resPrice},  {datetime.datetime.now().strftime('%H:%M:%S %d.%m')}")
+
         self.localBitcoinObject.sendRequest(f'/api/ad-equation/{online_buy}/', params={'price_equation': str(resPrice)
         }, method='post')
 
     def checkDashboardForNewContacts(self, msg, start=False):
+        completedMessagesText = "Completed messages:\n"
         for contact_id in list(self.contactsDict):
-            if not self.contactsDict[contact_id]['closed']:
-                contactReq = self.localBitcoinObject.getContactInfo(contact_id)
-                if contactReq['closed_at'] or contactReq['disputed_at']:
-                    print(f"Contact {contact_id} is closed, dict updated")
-                    del self.contactsDict[contact_id]
-        completedPayments = {}
-        for id, data in self.contactsDict.items():
-            if not data['closed'] and data['payment_completed']:
-                completedPayments[id] = {
-                    'amount' : data['amount'],
-                    'buyerMessages' : data['buyerMessages'],
-                }
-        if len(completedPayments) > 0:
-            try:
-                self.telegramBotObject.sendPaymentCompletedMessage(completedPayments)
-            except Exception as exc:
-                print("Connection ERROR with telegramBot, probably connection timeout.")
-                self.telegramBotObject.sendPaymentCompletedMessage(completedPayments)
-            print("Completed payments:\n", " ".join([completedPayment for completedPayment in completedPayments]))
-            for elem in completedPayments:
-                buyerMsgs = ", ".join(completedPayments[elem]['buyerMessages'])
-                print(f"{elem} - {completedPayments[elem]['amount']} RUB, msgs: {buyerMsgs}")
-        else:
-            self.telegramBotObject.contactsRegex = r'(^All$)|'
+            contactReq = self.localBitcoinObject.getContactInfo(contact_id)
+            if contactReq['closed_at'] or contactReq['disputed_at']:
+                print(f"Contact {contact_id} is closed, dict updated")
+                del self.contactsDict[contact_id]
+            elif self.contactsDict[contact_id]['payment_completed']:
+                completedMessagesText += f"{contact_id} - {self.contactsDict[contact_id]['amount']}RUB - " + " ".join(self.contactsDict[contact_id]['buyerMessages']) + "\n"
+                self.telegramBotObject.addCompletedPayment(contact_id, self.contactsDict[contact_id]['amount'], self.contactsDict[contact_id]['buyerMessages'])
+
+        if completedMessagesText != "Completed messages:\n":
+            print(completedMessagesText)
+        """
+        print("Completed payments:\n", " ".join([completedPayment for completedPayment in completedPayments]))
+        for elem in completedPayments:
+            buyerMsgs = ", ".join(completedPayments[elem]['buyerMessages'])
+            print(f"{elem} - {completedPayments[elem]['amount']} RUB, msgs: {buyerMsgs}")
+        """
         dashBoard = self.localBitcoinObject.sendRequest('/api/dashboard/seller/', '', 'get')
         for contact in dashBoard['contact_list']:
             contact = contact['data']
@@ -165,7 +159,6 @@ class LocalBitcoinBot:
                 self.contactsDict[contact_id] = {
                     'sentCard' : True,
                     'askedFIO': True,
-                    'closed' : False,
                     'payment_completed' : False,
                     'buyerMessages' : [],
                     'amount' : contact['amount']
@@ -177,7 +170,6 @@ class LocalBitcoinBot:
                     self.contactsDict[contact_id] = {
                         'sentCard': False,
                         'askedFIO' : False,
-                        'closed': False,
                         'payment_completed': False,
                         'buyerMessages': [],
                         'amount': contact['amount']
@@ -186,7 +178,7 @@ class LocalBitcoinBot:
                     if postMessageRequest[0] == 200:
                         self.contactsDict[contact_id]['sentCard'] = True #Changing dictionary only if message posting was succesful(code 200)
                         print('New contact: ', contact_id)
-                if not self.contactsDict[contact_id]['closed'] and paymentCompleted:
+                if paymentCompleted:
                     self.contactsDict[contact_id]['payment_completed'] = True
 
                     #Get user's mesggages and ask for FIO if needed
@@ -256,14 +248,14 @@ class LocalBitcoinBot:
 
     def scanning(self):
         buyAds = self.getListOfBuyAds()[0:5]
-        sellAds = self.getListOfSellAdsPrices(5)
+        sellAds = self.getListOfSellAdsPrices(3)
         buyAdsPrices = [float(x['temp_price']) for x in buyAds]
 
         buyAverage = round(sum(buyAdsPrices) / len(buyAdsPrices))
         sellAverage = round(sum(sellAds) / len(sellAds))
         curDifference = sellAverage - buyAverage
         print(f'{datetime.datetime.now().strftime("%d.%m %H:%M:%S")} Scanning localbitcoins: ... {curDifference}')
-        if curDifference > 105000:
+        if curDifference > 195000:
             winsound.MessageBeep()
 
     def chooseWorkType(self):   #User input function to define type of work
@@ -272,7 +264,6 @@ class LocalBitcoinBot:
 """main"""
 if __name__ == "__main__":
     localbitcoinsBot = LocalBitcoinBot(LocalBitcoin(key, secret), TelegramBot(tokens.telegramBotToken, tokens.telegramChatID, LocalBitcoin(key, secret)))
-
     spreadNeeded = False
     sellBorderNeeded = False
     cardMessageNeeded = False
@@ -311,7 +302,6 @@ if __name__ == "__main__":
                 elif workType == 'contacts': localbitcoinsBot.checkDashboardForNewContacts(sberMessage)
                 elif workType == 'sell':
                     localbitcoinsBot.selling(sellBorder)
-                    time.sleep(5)
                     localbitcoinsBot.checkDashboardForNewContacts(sberMessage)
                 elif workType == 'buy': localbitcoinsBot.buying(curSpread)
                 elif workType == "scanning": localbitcoinsBot.scanning()

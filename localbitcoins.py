@@ -296,6 +296,7 @@ class LocalBitcoin:
     """
 
     def sendRequest(self, endpoint, params, method):    #Base function
+        time.sleep(5)
         params_encoded = ''
         if params != '':
             params_encoded = urllib.parse.urlencode(params)
@@ -322,21 +323,21 @@ class LocalBitcoin:
                     return js['data']
             else:
                 js = json.loads(response.text)
-                print(datetime.now().strftime("%d.%m %H:%M:%S"), endpoint, "GET ERROR, waiting 5sec...", '\n', response.text, "\n", js)
-                time.sleep(5)
+                print(datetime.now().strftime("%d.%m %H:%M:%S"), endpoint, "GET ERROR, waiting 20sec...", '\n', response.text, "\n", js)
+                time.sleep(20)
                 return self.sendRequest(endpoint, params, 'get')
         elif method == 'post':
             response = requests.post(self.baseurl + endpoint, headers=headers, data=params)
             if response.status_code != 200:
                 js = json.loads(response.text)
             #Different errors need different solutuions
-                print(datetime.now().strftime("%d.%m %H:%M:%S"), endpoint, f"POST ERROR, wating 5sec\n{js}")
+                print(datetime.now().strftime("%d.%m %H:%M:%S"), endpoint, f"POST ERROR, wating 20sec\n{js}")
                 print(response.status_code, response.text)
                 #CONTACTS RELEASE ERRORS
                 if js['error']['message'] == "This is not a valid and releasable contact" and js['error']['error_code'] == 6:
                     # If contact is not releasable: contact is already released or contact is closed somehow else
                     print(f"{endpoint} can't be released, wrong ID or already released.")
                 else:
-                    time.sleep(5)
+                    time.sleep(20)
                     return self.sendRequest(endpoint, params, 'post')
             return (response.status_code, response.text)

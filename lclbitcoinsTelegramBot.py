@@ -5,7 +5,8 @@ from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
 from localbits.tokens import telegramBotToken, telegramChatID, online_buy, online_sell
 from localbits.localbitcoins import LocalBitcoin
 
-import re
+import re, time, datetime
+from typing import Union
 
 class TelegramBot:
 
@@ -71,21 +72,17 @@ class TelegramBot:
                     'buyerMessages' : [],
                 }
     """
-    def sendPaymentCompletedMessage(self, dict):
-        self.releaseDict = dict
-        botText = "Some payments are ready:\n"
-        self.contactsRegex = r'(^All$)|'
-        successfullyReleasedContacts = set()
-        for key in list(self.releaseDict):
-            curKeyRegExp = f"(^{key}$)|"
-            self.contactsRegex += curKeyRegExp
-            botText += str(f"<b>{key}</b> - <b>{self.releaseDict[key]['amount']}</b>RUB - " + "; ".join(self.releaseDict[key]['buyerMessages']) + "\n")
-        self.contactsRegex = self.contactsRegex[:-1]
+    def addCompletedPayment(self, contact_id, amount, messages):
+        self.releaseDict[contact_id] = {'amount' : amount, 'buyerMessages' : messages}
+        curKeyRegExp = f"(^{contact_id}$)|"
+        self.contactsRegex += curKeyRegExp
+        botText = str(f"Payment completed:\n<b>{contact_id}</b> - <b>{self.releaseDict[contact_id]['amount']}</b>RUB - " + "; ".join(self.releaseDict[contact_id]['buyerMessages']) + "\n")
 
-        bitcoinBalance = self.localBitcoinObject.getWalletBalance()['total']['balance']
-        botText += f"\nBalance: <strong>{bitcoinBalance}</strong> BTC."
         self.dispatcher.add_handler(MessageHandler(Filters.regex(self.contactsRegex), self.chooseContactsToRelease))
-        self.updater.bot.send_message(self.chatID, text=botText, reply_markup=self.generateReplyKeyboard(dict), parse_mode=ParseMode.HTML)
+        self.sendMessageWithConnectionCheck(chat_id=self.chatID, text=botText,
+                                            reply_markup=self.generateReplyKeyboard(self.releaseDict),
+                                            parse_mode=ParseMode.HTML)
+        #self.updater.bot.send_message(self.chatID, text=botText, reply_markup=self.generateReplyKeyboard(self.releaseDict), parse_mode=ParseMode.HTML)
 
     """
     Generates keyboard for contacts in dictionary of completed payments with 'all' option to release all contacts.
@@ -112,7 +109,8 @@ class TelegramBot:
     """
     def releaseContact(self, contactID):
         reply_text = f"Trying to release contact {contactID}..."
-        messageID = self.updater.bot.send_message(chat_id=self.chatID, text=reply_text).message_id
+        messageID = self.sendMessageWithConnectionCheck(chat_id=self.chatID, text=reply_text).message_id
+        #messageID = self.updater.bot.send_message(chat_id=self.chatID, text=reply_text).message_id
         st_code = self.localBitcoinObject.contactRelease(contactID)[0]
         if st_code == 200:
             reply_text = f"Contact {contactID} release - success✅!"
@@ -120,9 +118,8 @@ class TelegramBot:
         else:
             reply_text = f"Contact {contactID} release - fail❌!"
         self.updater.bot.delete_message(chat_id=self.chatID, message_id=messageID)
-        self.updater.bot.send_message(chat_id=self.chatID, text=reply_text)
-        if len(self.releaseDict) > 0:
-            self.sendPaymentCompletedMessage(self.releaseDict)
+        self.sendMessageWithConnectionCheck(chat_id=self.chatID, text=reply_text)
+        if len(self.releaseDict) == 0: self.contactsRegex = r'(^All$)|'
 
     """
     Get status of main SELL and BUY ads.
@@ -140,14 +137,17 @@ class TelegramBot:
             else: text += '<b>Buying</b>'
             text += f' | Limits: {int(float(ad["min_amount"]))} - {int(float(ad["max_amount_available"]))}\n'
         text += f"\nBalance: <strong>{bitcoinBalance}</strong> BTC."
-        self.updater.bot.send_message(update.message.chat_id, text, parse_mode=ParseMode.HTML)
+        self.sendMessageWithConnectionCheck(chat_id=self.chatID, text=text, parse_mode=ParseMode.HTML)
+        #self.updater.bot.send_message(update.message.chat_id, text, parse_mode=ParseMode.HTML)
 
     """
     Switches needed ad(sell, buy or both(all)) to needed status(OFF(0) or ON(1)) 
     """
     def switchAd(self, update, context):
         severalAds = self.localBitcoinObject.getSeveralAds(online_buy, online_sell)
-        print(severalAds)
+        print(datetime.datetime.now().strftime("%d.%m %H:%M:%S"), "Got ads params, and sleeping 5sec")
+        time.sleep(5)
+        print(datetime.datetime.now().strftime("%d.%m %H:%M:%S"), "Sending request to switch ad now!\n", severalAds)
         userArgs = " ".join(context.args)
         sellWordRegex = re.compile(r'sel|all')
         buyWordRegex = re.compile(r'buy|all')
@@ -208,7 +208,8 @@ class TelegramBot:
 
         if replyMessage == '':
             replyMessage = 'Haven\'t found any AD❌!'
-        self.updater.bot.send_message(update.message.chat_id, text=replyMessage)
+        self.sendMessageWithConnectionCheck(chat_id=update.message.chat_id, text=replyMessage)
+        #self.updater.bot.send_message(update.message.chat_id, text=replyMessage)
 
     """
     TODO: Change ads' prices or price changing algorithm.
@@ -222,7 +223,7 @@ class TelegramBot:
     /help command handler.
     """
     def help(self, update, context):
-        self.updater.bot.send_message(chat_id=update.message.chat_id,
+        self.sendMessageWithConnectionCheck(chat_id=update.message.chat_id,
                                       text="Paid contacts should be sent to you automatically. Choose contacts to release from buttons menu.\n\n"+
                                            "List of available commands:\n"
                                            "/switchAd - Switch ad on or off.\n"
@@ -230,11 +231,28 @@ class TelegramBot:
                                            "/changeWorkMode - Change type of work.")
 
     def main(self):
-        self.updater.bot.send_message(self.chatID, text="Licman's LocalBitcoins helper bot started!")
+        self.sendMessageWithConnectionCheck(self.chatID, text="Licman's LocalBitcoins helper bot started!")
+
+    """
+    Function to send messages at random time, which can result in connection ERROR with telegram bot.
+    It's needed to resend message if error occured.
+    """
+
+    def sendMessageWithConnectionCheck(self,
+                                       chat_id,
+                                       text,
+                                       reply_markup : Union[ReplyKeyboardMarkup, InlineKeyboardMarkup] = None,
+                                       parse_mode : ParseMode = None):
+        try:
+            return self.updater.bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup, parse_mode=parse_mode)
+        except Exception as exc:
+            print("Connection ERROR with telegramBot, probably connection timeout.")
+            return self.sendMessageWithConnectionCheck(chat_id, text, reply_markup, parse_mode)
 
     """
     /start command handler
-    """
+     """
+
     def start(self, update, context):
         keyboard = [
             [
@@ -242,7 +260,7 @@ class TelegramBot:
             ]
         ]
         markup = InlineKeyboardMarkup(keyboard)
-        self.updater.bot.send_message(chat_id=update.message.chat_id,
+        self.sendMessageWithConnectionCheck(chat_id=update.message.chat_id,
                                       text="Hello!\nThis is private(for now) localbitcoins bot of <a href=\"tg://user?id=560166970\">QLicman</a>\n",
                                       parse_mode=ParseMode.HTML, reply_markup=markup)
 
