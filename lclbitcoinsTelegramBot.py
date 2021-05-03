@@ -22,6 +22,7 @@ class TelegramBot:
         self.dispatcher = self.updater.dispatcher
         self.localBitcoinObject = localBitcoinObject
         self.releaseDict = {}
+        self.workTypes = [('work1', True), ('work2', False), ('work3', False)]
         self.exampleDict = {
         123: {
             'sentCard': True,
@@ -61,6 +62,7 @@ class TelegramBot:
         self.dispatcher.add_handler(CommandHandler('help', self.help))
         self.dispatcher.add_handler(CommandHandler('adsstatus', self.adsStatus))
         self.dispatcher.add_handler(CommandHandler('switchad', self.switchAd))
+        self.dispatcher.add_handler(CommandHandler('changework', self.changeWorkType))
 
     """
     Get dictionary of completed payments from main function
@@ -264,6 +266,43 @@ class TelegramBot:
                                       text="Hello!\nThis is private(for now) localbitcoins bot of <a href=\"tg://user?id=560166970\">QLicman</a>\n",
                                       parse_mode=ParseMode.HTML, reply_markup=markup)
 
+    def checkWorkSelected(self):
+        index = 0
+        while True:
+            for worktype, boolean in self.workTypes:
+                if boolean:
+                    if worktype == 'work1':
+                        self.work1()
+                    elif worktype == 'work2':
+                        self.work2()
+                    elif worktype == 'work3':
+                        self.work3()
+                index += 1
+
+
+    def changeWorkType(self, update, context):
+        workType = context.args[0]
+        index = 0
+        for work, boolean in self.workTypes:
+            self.workTypes[index] = (work, False)
+            if workType == work:
+                self.workTypes[index] = (work, True)
+            index += 1
+        self.sendMessageWithConnectionCheck(update.message.chat_id, 'Changed work type to ' + workType)
+
+    def work1(self):
+        print("WORK 1!!!")
+        #time.sleep(5)
+    def work2(self):
+        print("WORK 2!!!")
+        #time.sleep(5)
+    def work3(self):
+        print("WORK 3!!!")
+        #time.sleep(5)
+
+
+
 if __name__ == '__main__':
-    newBot = TelegramBot(telegramBotToken, telegramChatID)
-    newBot.main()
+    newBot = TelegramBot(telegramBotToken, telegramChatID, None)
+    newBot.updater.start_polling()
+    newBot.checkWorkSelected()
