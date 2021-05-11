@@ -1,4 +1,4 @@
-from telegram import ReplyKeyboardMarkup, ParseMode, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, ParseMode, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
                           ConversationHandler, PicklePersistence)
 
@@ -22,47 +22,20 @@ class TelegramBot:
         self.dispatcher = self.updater.dispatcher
         self.localBitcoinObject = localBitcoinObject
         self.releaseDict = {}
-        self.workTypes = [('work1', True), ('work2', False), ('work3', False)]
-        self.exampleDict = {
-        123: {
-            'sentCard': True,
-            'askedFIO': True,
-            'closed': False,
-            'payment_completed': False,
-            'buyerMessages': ["John Smith"],
-            'amount': '735'
-        },
-        126: {
-            'sentCard': True,
-            'askedFIO': True,
-            'closed': False,
-            'payment_completed': False,
-            'buyerMessages': ["Paid", "Vanya"],
-            'amount': '1080'
-        },
-        130: {
-            'sentCard': True,
-            'askedFIO': True,
-            'closed': False,
-            'payment_completed': False,
-            'buyerMessages': ["There will be a lot of text", "some random shit that doesnt matter at all", "And then there will be his name, but not right now, later", "Finally, Dick"],
-            'amount': '1488'
-        },
-        145: {
-            'sentCard': True,
-            'askedFIO': True,
-            'closed': False,
-            'payment_completed': True,
-            'buyerMessages': ["I'm afk"],
-            'amount': '10200'
-        },
-    }
+
+        #This info strongly connected with bot's implementation
+        self.worksDictionary = {
+            'sell' : {'status' : False, 'sellBorder' : None, 'cardMessage' : None},
+            'buy' : {'status' : False, 'buyDifference' : None},
+            'scanning' : {'status' : False}
+        }
 
         self.dispatcher.add_handler(CommandHandler('start', self.start))
         self.dispatcher.add_handler(CommandHandler('help', self.help))
         self.dispatcher.add_handler(CommandHandler('adsstatus', self.adsStatus))
         self.dispatcher.add_handler(CommandHandler('switchad', self.switchAd))
-        self.dispatcher.add_handler(CommandHandler('changework', self.changeWorkType))
+        self.dispatcher.add_handler(CommandHandler('switchwork', self.switchWork))
+        self.dispatcher.add_handler(CommandHandler('changeborder', self.changeBorder))
 
     """
     Get dictionary of completed payments from main function
@@ -84,7 +57,6 @@ class TelegramBot:
         self.sendMessageWithConnectionCheck(chat_id=self.chatID, text=botText,
                                             reply_markup=self.generateReplyKeyboard(self.releaseDict),
                                             parse_mode=ParseMode.HTML)
-        #self.updater.bot.send_message(self.chatID, text=botText, reply_markup=self.generateReplyKeyboard(self.releaseDict), parse_mode=ParseMode.HTML)
 
     """
     Generates keyboard for contacts in dictionary of completed payments with 'all' option to release all contacts.
@@ -112,7 +84,6 @@ class TelegramBot:
     def releaseContact(self, contactID):
         reply_text = f"Trying to release contact {contactID}..."
         messageID = self.sendMessageWithConnectionCheck(chat_id=self.chatID, text=reply_text).message_id
-        #messageID = self.updater.bot.send_message(chat_id=self.chatID, text=reply_text).message_id
         st_code = self.localBitcoinObject.contactRelease(contactID)[0]
         if st_code == 200:
             reply_text = f"Contact {contactID} release - success✅!"
@@ -120,8 +91,13 @@ class TelegramBot:
         else:
             reply_text = f"Contact {contactID} release - fail❌!"
         self.updater.bot.delete_message(chat_id=self.chatID, message_id=messageID)
-        self.sendMessageWithConnectionCheck(chat_id=self.chatID, text=reply_text)
-        if len(self.releaseDict) == 0: self.contactsRegex = r'(^All$)|'
+        markup = None
+        if len(self.releaseDict) == 0:
+            markup = ReplyKeyboardRemove()
+        self.sendMessageWithConnectionCheck(chat_id=self.chatID, text=reply_text, reply_markup=markup)
+
+        if len(self.releaseDict) == 0:
+            self.contactsRegex = r'(^All$)|'
 
     """
     Get status of main SELL and BUY ads.
@@ -135,83 +111,192 @@ class TelegramBot:
             if ad['visible']: text += '<i>On</i>🟢'
             else: text += '<i>Off</i>🔴'
 
-            if ad['trade_type'] == 'ONLINE_SELL': text += '<b>Selling</b>'
-            else: text += '<b>Buying</b>'
-            text += f' | Limits: {int(float(ad["min_amount"]))} - {int(float(ad["max_amount_available"]))}\n'
+            argumentsInfo = ''
+            if ad['trade_type'] == 'ONLINE_SELL':
+                text += '<b>Selling</b>'
+                argumentsInfo = f"Sell Border: {self.worksDictionary['sell']['sellBorder']}\n" \
+                                 f"Active Card: {self.worksDictionary['sell']['cardMessage']}"
+            else:
+                text += '<b>Buying</b>'
+                argumentsInfo = f"Buy Difference: {self.worksDictionary['buy']['buyDifference']}"
+            text += f'\nLimits: {int(float(ad["min_amount"]))} - {int(float(ad["max_amount_available"]))}\n{argumentsInfo}\n\n'
         text += f"\nBalance: <strong>{bitcoinBalance}</strong> BTC."
         self.sendMessageWithConnectionCheck(chat_id=self.chatID, text=text, parse_mode=ParseMode.HTML)
-        #self.updater.bot.send_message(update.message.chat_id, text, parse_mode=ParseMode.HTML)
 
     """
-    Switches needed ad(sell, buy or both(all)) to needed status(OFF(0) or ON(1)) 
+    Switches needed ad(sell or buy) to needed status(OFF(0) or ON(1)) 
     """
     def switchAd(self, update, context):
-        severalAds = self.localBitcoinObject.getSeveralAds(online_buy, online_sell)
-        print(datetime.datetime.now().strftime("%d.%m %H:%M:%S"), "Got ads params, and sleeping 5sec")
-        time.sleep(5)
-        print(datetime.datetime.now().strftime("%d.%m %H:%M:%S"), "Sending request to switch ad now!\n", severalAds)
         userArgs = " ".join(context.args)
-        sellWordRegex = re.compile(r'sel|all')
-        buyWordRegex = re.compile(r'buy|all')
-        switchOnRegex = re.compile(r'on|1')
-        switchOffRegex = re.compile(r'off|0')
+        sellWordRegex, buyWordRegex, switchOnRegex, switchOffRegex = re.compile(r'sel'), re.compile(r'buy'), re.compile(r'on|1'), re.compile(r'off|0')
+
+        switchBoolean = None
         replyMessage = ''
-        if sellWordRegex.search(userArgs):
-            curAd = severalAds[1]['data']
-            sellAdParams = {'price_equation': curAd['price_equation'],
-                          'lat': curAd['lat'],
-                          'lon': curAd['lon'],
-                          'countrycode': curAd['countrycode'],
-                          'max_amount': int(float(curAd['max_amount'])),
-                          'msg' : curAd['msg'],
-                          'track_max_amount': False,
-                          'account_info' : curAd['account_info']}
-            if switchOnRegex.search(userArgs) and not switchOffRegex.search(userArgs):
-                sellAdParams['visible'] = True
-                if curAd['visible']:
-                    replyMessage += "SELL Ad is already turned ON🟢!\n"
-                elif self.localBitcoinObject.sendRequest(f'/api/ad/{online_sell}/', sellAdParams, 'post')[0] == 200:
-                    replyMessage += "SELL Ad was successfully turned ON🟢!\n"
-            elif switchOffRegex.search(userArgs) and not switchOnRegex.search(userArgs):
-                sellAdParams['visible'] = False
-                if not curAd['visible']:
-                    replyMessage += "SELL Ad is already turned OFF🔴!\n"
-                elif self.localBitcoinObject.sendRequest(f'/api/ad/{online_sell}/', sellAdParams, 'post')[0] == 200:
-                    replyMessage += "SELL Ad was successfully turned OFF🔴!\n"
-            elif switchOffRegex.search(userArgs) and switchOnRegex.search(userArgs):
-                replyMessage = "Found 2 states at the same time!\nChoose OFF or ON!❌"
-            else:
-                replyMessage = "Found SELL Ad, but not STATUS❌!"
-        if buyWordRegex.search(userArgs):
-            curAd = severalAds[0]['data']
-            buyAdParams = {'price_equation': curAd['price_equation'],
-                          'lat': curAd['lat'],
-                          'lon': curAd['lon'],
-                          'countrycode': curAd['countrycode'],
-                          'max_amount': int(float(curAd['max_amount'])),
-                          'msg' : curAd['msg'],
-                          'track_max_amount': True}
-            if switchOnRegex.search(userArgs) and not switchOffRegex.search(userArgs):
-                buyAdParams['visible'] = True
-                if curAd['visible']:
-                    replyMessage += "BUY Ad is already turned ON🟢!\n"
-                elif self.localBitcoinObject.sendRequest(f'/api/ad/{online_buy}/', buyAdParams, 'post')[0] == 200:
-                    replyMessage += "BUY Ad was successfully turned ON🟢!\n"
-            elif switchOffRegex.search(userArgs) and not switchOnRegex.search(userArgs):
-                buyAdParams['visible'] = False
-                if not curAd['visible']:
-                    replyMessage += "BUY Ad is already turned OFF🔴!\n"
-                elif self.localBitcoinObject.sendRequest(f'/api/ad/{online_buy}/', buyAdParams, 'post')[0] == 200:
-                    replyMessage += "BUY Ad was successfully turned OFF🔴!\n"
-            elif switchOffRegex.search(userArgs) and switchOnRegex.search(userArgs):
-                    replyMessage = "Found 2 states at the same time!\nChoose OFF or ON!❌"
-            else:
-                replyMessage = "Found BUY Ad, but not STATUS❌!"
+
+        if not switchOnRegex.search(userArgs) and not switchOffRegex.search(userArgs):
+            replyMessage = f"Haven't found any status(ON/OFF)!❌"
+        elif switchOffRegex.search(userArgs) and switchOnRegex.search(userArgs):
+            replyMessage = f"Found both statuses. Choose ONE!❌"
+        else:
+            if switchOnRegex.search(userArgs): switchBoolean = True
+            else: switchBoolean = False
+            statusText, statusSymbol = self.returnStatusTextAndSymbol(switchBoolean)
+            statusCode, adText = 0, ""
+
+            if sellWordRegex.search(userArgs):
+                statusCode = self.localBitcoinObject.switchAd(online_sell, switchBoolean)[0]
+                adText = "SELL"
+            elif buyWordRegex.search(userArgs):
+                statusCode = self.localBitcoinObject.switchAd(online_buy, switchBoolean)[0]
+                adText = "BUY"
+            if statusCode == -1:  # If ad already has this status, so we don't need to send request to local
+                replyMessage = f"{adText} AD is already has status {statusText}!{statusSymbol}"
+            elif statusCode == 200:
+                replyMessage = f"{adText} AD successfully switched to {statusText}!{statusSymbol}"
 
         if replyMessage == '':
-            replyMessage = 'Haven\'t found any AD❌!'
+            replyMessage = 'Haven\'t found any AD(SELL/BUY)!❌'
         self.sendMessageWithConnectionCheck(chat_id=update.message.chat_id, text=replyMessage)
-        #self.updater.bot.send_message(update.message.chat_id, text=replyMessage)
+
+    """
+    Switches work modes on and off.
+    """
+    def switchWork(self, update, context):
+        userArgs = " ".join(context.args)
+        workSellRegex, workBuyRegex, workScanningRegex = re.compile(r'\bsel\w{0,4}'), re.compile(r'\bbuy\w{0,3}'), re.compile(r'\bscan\w{0,4}scan')
+        switchOnRegex, switchOffRegex = re.compile(r'\bon\b'), re.compile(r'\boff\b')
+        numberRegex = re.compile(r'-?\d+')
+        cardMessageRegex = re.compile(r'(\bme\b)|(\bmom\b)|(\bayrat\b)')
+        reply_text = ''
+        workStatus : bool = None
+        numberArgument = None
+        cardMessage = None
+        if switchOnRegex.search(userArgs):
+            workStatus = True
+        elif switchOffRegex.search(userArgs):
+            workStatus = False
+        if workStatus is None:
+            reply_text = f"Haven't found any status(ON/OFF)!❌"
+
+        else:
+            if numberRegex.search(userArgs):
+                numberArgument = int(numberRegex.search(userArgs).group())
+            if cardMessageRegex.search(userArgs):
+                cardMessage = cardMessageRegex.search(userArgs).group()
+
+            if workSellRegex.search(userArgs):
+                reply_text = self.actionOnWorkChoose('sell', workStatus, numberArgument, cardMessage)
+            elif workBuyRegex.search(userArgs):
+                reply_text = self.actionOnWorkChoose('buy', workStatus, numberArgument)
+            elif workScanningRegex.search(userArgs):
+                reply_text = self.actionOnWorkChoose('scanning', workStatus)
+        self.sendMessageWithConnectionCheck(update.message.chat_id, reply_text)
+
+    """
+    Controls which actions apply on work choose.
+    """
+    def actionOnWorkChoose(self, workType : str, switchStatus : bool, workArgument : int = None, sellCard : str = None):
+        statusText, statusSymb = self.returnStatusTextAndSymbol(switchStatus)
+
+        reply_text = ''
+        if workType == 'buy' and workArgument == None:
+            reply_text = f"Haven't found argument for {workType} work!❌"
+        elif switchStatus == None:
+            reply_text = f"Haven't found status for {workType} work!❌"
+        elif self.worksDictionary[workType]['status'] and workType != 'sell' == switchStatus:
+            reply_text = f"Work {workType} is already turned {statusText}!{statusSymb}"
+        else:
+            if workType == 'sell':
+                requestCodeAndText = self.localBitcoinObject.switchAd(online_sell, switchStatus)
+                if requestCodeAndText[0] == 200:
+                    reply_text += f"SELL AD switched {statusText}!{statusSymb}\n"
+                    reply_text += self.switchSellWork(switchStatus, workArgument, sellCard)
+                elif requestCodeAndText[0] == -1:
+                    reply_text += f"SELL AD is already was {statusText}!{statusSymb}\n"
+                    reply_text += self.switchSellWork(switchStatus, workArgument, sellCard)
+                else:
+                    reply_text += f"With SELL AD other ERROR occured:\n" + requestCodeAndText[1]
+
+            elif workType == 'buy':
+                requestCodeAndText = self.localBitcoinObject.switchAd(online_buy, switchStatus)
+                if requestCodeAndText[0] == 200:
+                    self.worksDictionary['buy']['status'] = switchStatus
+                    self.worksDictionary['buy']['buyDifference'] = workArgument
+                    reply_text = f"BUY WORK was turned {statusText}!{statusSymb}"
+                elif requestCodeAndText[0] == -1:
+                    reply_text = f"BUY WORK is already was {statusText}!{statusSymb}"
+                else:
+                    reply_text = f"With BUY WORK other ERROR occured:\n" + requestCodeAndText[1]
+
+            elif workType == 'scanning':
+                self.worksDictionary['scanning']['status'] = switchStatus
+                reply_text =  f"SCANNING WORK was turned {statusText}!{statusSymb}"
+        return reply_text
+
+    def switchSellWork(self, switchStatus : bool, sellBorder : int = None, cardMsg : str = None):
+        workType = 'sell'
+        reply_text = ''
+        if switchStatus is None:
+            reply_text = f"Haven't found any status(on/off) for SELL work!❌"
+        else:
+            statusText, statusSymbol = self.returnStatusTextAndSymbol(switchStatus)
+            if switchStatus is True:
+                if self.worksDictionary[workType]['status'] is False and self.worksDictionary[workType]['sellBorder'] is None and self.worksDictionary[workType]['cardMessage'] is None and (sellBorder is None or cardMsg is None):
+                    reply_text = f"Haven't found some of arguments(cardMsg/sellborder) for first launch of SELL work!❌"
+                elif self.worksDictionary[workType]['status'] is True:
+                    self.worksDictionary[workType]['sellBorder'] = sellBorder
+                    self.worksDictionary[workType]['cardMessage'] = cardMsg
+                    reply_text = f"Changed arguments of work, but SELL work already has status {statusText}!{statusSymbol}"
+                elif self.worksDictionary[workType]['status'] is False:
+                    self.worksDictionary[workType]['status'] = switchStatus
+                    self.worksDictionary[workType]['sellBorder'] = sellBorder
+                    self.worksDictionary[workType]['cardMessage'] = cardMsg
+                    reply_text = f"Changed status of SELL work to {statusText}!{statusSymbol}"
+            elif switchStatus is False:
+                if self.worksDictionary[workType]['status'] is False:
+                    reply_text = f"SELL work already has status {statusText}!{statusSymbol}"
+                else:
+                    self.worksDictionary[workType]['status'] = switchStatus
+                    reply_text = f"Changed status of SELL work to {statusText}!{statusSymbol}"
+        return reply_text
+
+    """
+    Change border / difference on sell / buy ads.
+    """
+    def changeBorder(self, update, context):
+        userArgs = " ".join(context.args)
+        reply_message = ''
+        sellAdRegex = re.compile(r'sel')
+        buyAdRegex = re.compile(r'buy')
+        numberRegex = re.compile(r'-?\d+')
+        activeAd = ''
+        currentNumber = 0
+        if sellAdRegex.search(userArgs) and buyAdRegex.search(userArgs):
+            reply_message = 'Found both sell and buy ad call. Choose ONE!❌'
+            self.sendMessageWithConnectionCheck(update.message.chat_id, reply_message)
+            return 0
+        elif sellAdRegex.search(userArgs):
+            activeAd = online_sell
+        elif buyAdRegex.search(userArgs):
+            activeAd = online_buy
+        else:
+            reply_message = "Haven't found any AD(sell/buy). Choose ONE!❌"
+            self.sendMessageWithConnectionCheck(update.message.chat_id, reply_message)
+            return 0
+
+        if not numberRegex.search(userArgs):
+            reply_message = "Haven't found number argument!❌"
+            self.sendMessageWithConnectionCheck(update.message.chat_id, reply_message)
+            return 0
+        else:
+            currentNumber = int(numberRegex.search(userArgs).group())
+        if activeAd == online_sell:
+            self.worksDictionary['sell']['sellBorder'] += currentNumber
+            reply_message = f"Changed sell border on {currentNumber}!🟢\nNew border: {self.worksDictionary['sell']['sellBorder']}"
+        elif activeAd == online_buy:
+            self.worksDictionary['buy']['buyDifference'] += currentNumber
+            reply_message = f"Changed buy difference on {currentNumber}!🟢nNew border: {self.worksDictionary['sell']['buyDifference']}"
+        self.sendMessageWithConnectionCheck(update.message.chat_id, reply_message)
 
     """
     TODO: Change ads' prices or price changing algorithm.
@@ -236,22 +321,6 @@ class TelegramBot:
         self.sendMessageWithConnectionCheck(self.chatID, text="Licman's LocalBitcoins helper bot started!")
 
     """
-    Function to send messages at random time, which can result in connection ERROR with telegram bot.
-    It's needed to resend message if error occured.
-    """
-
-    def sendMessageWithConnectionCheck(self,
-                                       chat_id,
-                                       text,
-                                       reply_markup : Union[ReplyKeyboardMarkup, InlineKeyboardMarkup] = None,
-                                       parse_mode : ParseMode = None):
-        try:
-            return self.updater.bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup, parse_mode=parse_mode)
-        except Exception as exc:
-            print("Connection ERROR with telegramBot, probably connection timeout.")
-            return self.sendMessageWithConnectionCheck(chat_id, text, reply_markup, parse_mode)
-
-    """
     /start command handler
      """
 
@@ -266,40 +335,35 @@ class TelegramBot:
                                       text="Hello!\nThis is private(for now) localbitcoins bot of <a href=\"tg://user?id=560166970\">QLicman</a>\n",
                                       parse_mode=ParseMode.HTML, reply_markup=markup)
 
-    def checkWorkSelected(self):
-        index = 0
-        while True:
-            for worktype, boolean in self.workTypes:
-                if boolean:
-                    if worktype == 'work1':
-                        self.work1()
-                    elif worktype == 'work2':
-                        self.work2()
-                    elif worktype == 'work3':
-                        self.work3()
-                index += 1
+    """
+    Function to send messages at random time, which can result in connection ERROR with telegram bot.
+    It's needed to resend message if error occured.
+    """
 
+    def sendMessageWithConnectionCheck(self,
+                                       chat_id,
+                                       text,
+                                       reply_markup : Union[ReplyKeyboardMarkup, InlineKeyboardMarkup, ReplyKeyboardRemove] = None,
+                                       parse_mode : ParseMode = None):
+        try:
+            return self.updater.bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup, parse_mode=parse_mode)
+        except Exception as exc:
+            print(f"Connection ERROR while trying to send {text} to {chat_id}, probably connection timeout.\nResending message...")
+            return self.sendMessageWithConnectionCheck(chat_id, text, reply_markup, parse_mode)
 
-    def changeWorkType(self, update, context):
-        workType = context.args[0]
-        index = 0
-        for work, boolean in self.workTypes:
-            self.workTypes[index] = (work, False)
-            if workType == work:
-                self.workTypes[index] = (work, True)
-            index += 1
-        self.sendMessageWithConnectionCheck(update.message.chat_id, 'Changed work type to ' + workType)
-
-    def work1(self):
-        print("WORK 1!!!")
-        #time.sleep(5)
-    def work2(self):
-        print("WORK 2!!!")
-        #time.sleep(5)
-    def work3(self):
-        print("WORK 3!!!")
-        #time.sleep(5)
-
+    """
+    Cosmetic helper function returning status 
+    """
+    def returnStatusTextAndSymbol(self, status : bool) -> (str, str):
+        statusText = ''
+        statusSymb = ''
+        if status == True:
+            statusText = 'ON'
+            statusSymb = '🟢'
+        else:
+            statusText = 'OFF'
+            statusSymb = '🔴'
+        return (statusText, statusSymb)
 
 
 if __name__ == '__main__':

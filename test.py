@@ -28,7 +28,7 @@ invisibleList = ['erikdar7777']
 Base class for running bot
 """
 class LocalBitcoinBot:
-    def __init__(self, localBitcoinObject, telegramBotObject):
+    def __init__(self, localBitcoinObject : LocalBitcoin, telegramBotObject : TelegramBot):
         self.localBitcoinObject = localBitcoinObject
         self.telegramBotObject = telegramBotObject
         self.contactsDict = {}
@@ -93,7 +93,7 @@ class LocalBitcoinBot:
             max_amount = float(ad['max_amount_available'])
             temp_price = float(ad['temp_price'])
             username = ad['profile']['username']
-            if min_amount <= 1500 and max_amount > 5000 and '+' in ad['profile']['trade_count'] and username not in botsList:
+            if min_amount <= 2560 and max_amount >= 3768 and username not in botsList:
                 if n>0:
                     #print(username, max_amount, end= " ")
                     logger.debug(f"SELL: {str(temp_price)} {username}")
@@ -132,6 +132,11 @@ class LocalBitcoinBot:
         }, method='post')
 
     def checkDashboardForNewContacts(self, msg, start=False):
+        if msg == 'me': msg = ruslanSberCardMessage
+        elif msg == 'mom': msg = momSberCardMessage
+        elif msg == 'ayrat': msg = ayratSberCardMessage
+
+        hasCompletedPayment = False
         completedMessagesText = "Completed messages:\n"
         for contact_id in list(self.contactsDict):
             contactReq = self.localBitcoinObject.getContactInfo(contact_id)
@@ -139,17 +144,16 @@ class LocalBitcoinBot:
                 print(f"Contact {contact_id} is closed, dict updated")
                 del self.contactsDict[contact_id]
             elif self.contactsDict[contact_id]['payment_completed']:
+                hasCompletedPayment = True
                 completedMessagesText += f"{contact_id} - {self.contactsDict[contact_id]['amount']}RUB - " + " ".join(self.contactsDict[contact_id]['buyerMessages']) + "\n"
                 self.telegramBotObject.addCompletedPayment(contact_id, self.contactsDict[contact_id]['amount'], self.contactsDict[contact_id]['buyerMessages'])
+        if not hasCompletedPayment:
+            self.telegramBotObject.releaseDict = {}
+            self.telegramBotObject.contactsRegex = r'(^All$)|'
 
         if completedMessagesText != "Completed messages:\n":
             print(completedMessagesText)
-        """
-        print("Completed payments:\n", " ".join([completedPayment for completedPayment in completedPayments]))
-        for elem in completedPayments:
-            buyerMsgs = ", ".join(completedPayments[elem]['buyerMessages'])
-            print(f"{elem} - {completedPayments[elem]['amount']} RUB, msgs: {buyerMsgs}")
-        """
+
         dashBoard = self.localBitcoinObject.sendRequest('/api/dashboard/seller/', '', 'get')
         for contact in dashBoard['contact_list']:
             contact = contact['data']
@@ -236,7 +240,7 @@ class LocalBitcoinBot:
             if username == myUserName:
                 myPrice = temp_price
                 continue
-            elif min_amount <= 2500 and max_amount >= 5000 and username not in invisibleList and temp_price > border:
+            elif min_amount <= 3100 and max_amount >= 4001 and username not in invisibleList and temp_price > border:
                 if myPrice < temp_price and temp_price - myPrice == 2:
                     break
                 logger.debug(f"{username} - {temp_price}")
@@ -270,33 +274,60 @@ if __name__ == "__main__":
     #Get worktype
     while True:
         workType = input("ENTER WORKTYPE ( " + " / ".join(localbitcoinsBot.workTypes) + " ): ".lower())
-        if workType in localbitcoinsBot.workTypes:
+        if workType == 'idle':
+            break
+        elif workType in localbitcoinsBot.telegramBotObject.worksDictionary.keys():
+            localbitcoinsBot.telegramBotObject.worksDictionary[workType]['status'] = True
             spreadNeeded = workType == 'all' or workType == 'buy'
             sellBorderNeeded = workType == 'all' or workType == 'sell'
             cardMessageNeeded = workType == 'all' or workType == 'sell' or workType == 'contacts'
             break
-    #Card choose
-    if cardMessageNeeded:
-        #Card on which noney will come
-        while True:
-            cardHolder = input("ENTER CARD on which money will come ( " + " / ".join(localbitcoinsBot.cardHolders)  + " ): ").lower()
-            if cardHolder in localbitcoinsBot.cardHolders:
-                if cardHolder == 'me': sberMessage = ruslanSberCardMessage
-                elif cardHolder == 'ayrat': sberMessage = ayratSberCardMessage
-                elif cardHolder == 'mom': sberMessage = momSberCardMessage
-                elif cardHolder == 'almir': sberMessage = almirSberCardMessage
-                break
-    #BUY spread
-    if spreadNeeded: curSpread = int(input("ENTER SPREAD DIFFERENCE: "))
-    #SELL border
-    if sellBorderNeeded: sellBorder = int(input("ENTER SELL BORDER: "))
+    if not workType == 'idle':
+        #Card choose
+        if cardMessageNeeded:
+            #Card on which noney will come
+            while True:
+                cardHolder = input("ENTER CARD on which money will come ( " + " / ".join(localbitcoinsBot.cardHolders)  + " ): ").lower()
+                if cardHolder in localbitcoinsBot.cardHolders:
+                    if cardHolder == 'me':
+                        sberMessage = ruslanSberCardMessage
+                        localbitcoinsBot.telegramBotObject.worksDictionary['sell']['cardMessage'] = 'me'
+                    elif cardHolder == 'ayrat':
+                        sberMessage = ayratSberCardMessage
+                        localbitcoinsBot.telegramBotObject.worksDictionary['sell']['cardMessage'] = 'ayrat'
+                    elif cardHolder == 'mom':
+                        sberMessage = momSberCardMessage
+                        localbitcoinsBot.telegramBotObject.worksDictionary['sell']['cardMessage'] = 'mom'
+                    elif cardHolder == 'almir':
+                        sberMessage = almirSberCardMessage
+                    break
+        #BUY spread
+        if spreadNeeded:
+            curSpread = int(input("ENTER SPREAD DIFFERENCE: "))
+            localbitcoinsBot.telegramBotObject.worksDictionary['buy']['buyDifference'] = curSpread
+        #SELL border
+        if sellBorderNeeded:
+            sellBorder = int(input("ENTER SELL BORDER: "))
+            localbitcoinsBot.telegramBotObject.worksDictionary['sell']['sellBorder'] = sellBorder
     logger = localbitcoinsBot.get_logger()
     while True:
         try:
             localbitcoinsBot.telegramBotObject.updater.start_polling()
             with open('logs.log', 'w'): pass #Clearing log file
-            workTime = 80000000
-            if cardMessageNeeded: localbitcoinsBot.checkDashboardForNewContacts(sberMessage, start=True)
+            if cardMessageNeeded:
+                localbitcoinsBot.checkDashboardForNewContacts(localbitcoinsBot.telegramBotObject.worksDictionary['sell']['cardMessage'], start=True)
+            while True:
+                for workKey in localbitcoinsBot.telegramBotObject.worksDictionary.keys():
+                    #print(curWork, boolean)
+                    if localbitcoinsBot.telegramBotObject.worksDictionary[workKey]['status'] == True:
+                        if workKey == 'sell':
+                            localbitcoinsBot.selling(localbitcoinsBot.telegramBotObject.worksDictionary['sell']['sellBorder'])
+                            localbitcoinsBot.checkDashboardForNewContacts(localbitcoinsBot.telegramBotObject.worksDictionary['sell']['cardMessage'])
+                        elif workKey == 'buy':
+                            localbitcoinsBot.buying(localbitcoinsBot.telegramBotObject.worksDictionary['buy']['buyDifference'])
+                        elif workKey == 'scanning':
+                            localbitcoinsBot.scanning()
+            """
             while time.time() < time.time() + workTime:
                 if workType == 'all': localbitcoinsBot.executeAll(border=sellBorder, sberMsg=sberMessage, spreadDif=curSpread)
                 elif workType == 'contacts': localbitcoinsBot.checkDashboardForNewContacts(sberMessage)
@@ -305,6 +336,7 @@ if __name__ == "__main__":
                     localbitcoinsBot.checkDashboardForNewContacts(sberMessage)
                 elif workType == 'buy': localbitcoinsBot.buying(curSpread)
                 elif workType == "scanning": localbitcoinsBot.scanning()
+            """
         except Exception as exc:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             print(f"Some shit happened at  {datetime.datetime.now().strftime('%d.%m %H:%M:%S')}  restarting after 5 sec...")

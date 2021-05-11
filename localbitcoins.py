@@ -8,7 +8,6 @@ from datetime import datetime
 
 class LocalBitcoin:
     baseurl = 'https://localbitcoins.fi'
-    nonce_prev = 0
 
     def __init__(self, hmac_auth_key, hmac_auth_secret, debug=False):
         self.hmac_auth_key = hmac_auth_key
@@ -287,6 +286,29 @@ class LocalBitcoin:
         adsArgs = ",".join(adsList)
         fieldsArgs = ",".join(fieldsList)
         return self.sendRequest(endpoint='/api/ad-get/', params={'ads' : adsArgs, 'fields' : fieldsArgs}, method='get')
+
+    """
+    Switch ad on or off.
+    """
+
+    def switchAd(self, adID, status : bool):
+        adInfo = self.getAdInfo(adID, 'trade_type', 'visible', 'price_equation', 'lat', 'lon', 'countrycode', 'max_amount', 'msg', 'track_max_amount')
+        trackMaxAmount = False
+        if adInfo['trade_type'] == 'ONLINE_BUY':
+            trackMaxAmount = True
+        if adInfo['visible'] == status:
+            return (-1, f'Ad is already has status {status}')
+        else:
+            adNewParams = { 'visible' : status,
+                            'price_equation': adInfo['price_equation'],
+                            'lat': adInfo['lat'],
+                            'lon': adInfo['lon'],
+                            'countrycode': adInfo['countrycode'],
+                            'max_amount': int(float(adInfo['max_amount'])),
+                            'msg': adInfo['msg'],
+                            'track_max_amount': trackMaxAmount,
+                            'require_trade_volume' : 0.0001}
+            return self.sendRequest(f'/api/ad/{adID}/', adNewParams, 'post')
 
     """
     Base function of making requests with needed encoded info:

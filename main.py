@@ -236,7 +236,7 @@ class LocalBitcoinBot:
             if username == myUserName:
                 myPrice = temp_price
                 continue
-            elif min_amount <= 2500 and max_amount >= 5000 and username not in invisibleList and temp_price > border:
+            elif min_amount <= 2560 and max_amount >= 3768 and username not in invisibleList and temp_price > border:
                 if myPrice < temp_price and temp_price - myPrice == 2:
                     break
                 logger.debug(f"{username} - {temp_price}")
