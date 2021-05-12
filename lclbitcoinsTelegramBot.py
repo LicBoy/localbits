@@ -5,7 +5,7 @@ from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
 from localbits.tokens import telegramBotToken, telegramChatID, online_buy, online_sell
 from localbits.localbitcoins import LocalBitcoin
 
-import re, time, datetime
+import re, time, datetime, urllib3
 from typing import Union
 
 class TelegramBot:
@@ -163,7 +163,7 @@ class TelegramBot:
     """
     def switchWork(self, update, context):
         userArgs = " ".join(context.args)
-        workSellRegex, workBuyRegex, workScanningRegex = re.compile(r'\bsel\w{0,4}'), re.compile(r'\bbuy\w{0,3}'), re.compile(r'\bscan\w{0,4}scan')
+        workSellRegex, workBuyRegex, workScanningRegex = re.compile(r'\bsel\w{0,4}'), re.compile(r'\bbuy\w{0,3}'), re.compile(r'\bscan\w{0,4}')
         switchOnRegex, switchOffRegex = re.compile(r'\bon\b'), re.compile(r'\boff\b')
         numberRegex = re.compile(r'-?\d+')
         cardMessageRegex = re.compile(r'(\bme\b)|(\bmom\b)|(\bayrat\b)')
@@ -190,6 +190,8 @@ class TelegramBot:
                 reply_text = self.actionOnWorkChoose('buy', workStatus, numberArgument)
             elif workScanningRegex.search(userArgs):
                 reply_text = self.actionOnWorkChoose('scanning', workStatus)
+            else:
+                reply_text = "Haven't found any work mode!❌"
         self.sendMessageWithConnectionCheck(update.message.chat_id, reply_text)
 
     """
@@ -340,6 +342,7 @@ class TelegramBot:
     It's needed to resend message if error occured.
     """
 
+    #NEEDED TO BE REWRITED! NEED to catch special exception!
     def sendMessageWithConnectionCheck(self,
                                        chat_id,
                                        text,
@@ -347,9 +350,11 @@ class TelegramBot:
                                        parse_mode : ParseMode = None):
         try:
             return self.updater.bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup, parse_mode=parse_mode)
-        except Exception as exc:
-            print(f"Connection ERROR while trying to send {text} to {chat_id}, probably connection timeout.\nResending message...")
+        except urllib3.exceptions.HTTPError as connectionExc:
+            print(f"Connection aborted while trying to send {text} to {chat_id}, probably connection timeout.\nResending message...\n", connectionExc)
             return self.sendMessageWithConnectionCheck(chat_id, text, reply_markup, parse_mode)
+        except Exception as exc:
+            print(f"Other ERROR occured while sending telegram message!\n", exc)
 
     """
     Cosmetic helper function returning status 
