@@ -159,40 +159,41 @@ class LocalBitcoinBot:
             contact = contact['data']
             contact_id = str(contact['contact_id'])
             paymentCompleted = contact['payment_completed_at']
-            if start == True:
-                self.contactsDict[contact_id] = {
-                    'sentCard' : True,
-                    'askedFIO': True,
-                    'payment_completed' : False,
-                    'buyerMessages' : [],
-                    'amount' : contact['amount']
-                }
-                if paymentCompleted:
-                    self.contactsDict[contact_id]['payment_completed'] = True
-            else:
-                if contact_id not in self.contactsDict:
+            if not contact['disputed_at']:
+                if start == True:
                     self.contactsDict[contact_id] = {
-                        'sentCard': False,
-                        'askedFIO' : False,
-                        'payment_completed': False,
-                        'buyerMessages': [],
-                        'amount': contact['amount']
+                        'sentCard' : True,
+                        'askedFIO': True,
+                        'payment_completed' : False,
+                        'buyerMessages' : [],
+                        'amount' : contact['amount']
                     }
-                    postMessageRequest = self.localBitcoinObject.postMessageToContact(contact_id, msg)
-                    if postMessageRequest[0] == 200:
-                        self.contactsDict[contact_id]['sentCard'] = True #Changing dictionary only if message posting was succesful(code 200)
-                        print('New contact: ', contact_id)
-                if paymentCompleted:
-                    self.contactsDict[contact_id]['payment_completed'] = True
+                    if paymentCompleted:
+                        self.contactsDict[contact_id]['payment_completed'] = True
+                else:
+                    if contact_id not in self.contactsDict:
+                        self.contactsDict[contact_id] = {
+                            'sentCard': False,
+                            'askedFIO' : False,
+                            'payment_completed': False,
+                            'buyerMessages': [],
+                            'amount': contact['amount']
+                        }
+                        postMessageRequest = self.localBitcoinObject.postMessageToContact(contact_id, msg)
+                        if postMessageRequest[0] == 200:
+                            self.contactsDict[contact_id]['sentCard'] = True #Changing dictionary only if message posting was succesful(code 200)
+                            print('New contact: ', contact_id)
+                    if paymentCompleted:
+                        self.contactsDict[contact_id]['payment_completed'] = True
 
-                    #Get user's mesggages and ask for FIO if needed
-                    messageReq = self.localBitcoinObject.getContactMessages(contact_id)
-                    messages = messageReq['message_list']
-                    self.contactsDict[contact_id]['buyerMessages'] = [msg['msg'] for msg in messages if msg['sender']['username'] != myUserName]
-                    if not self.contactsDict[contact_id]['askedFIO'] and len(self.contactsDict[contact_id]['buyerMessages']) == 0:
-                        #There could be better way of determining if user sent his name
-                        if self.localBitcoinObject.postMessageToContact(contact_id, message=askForFIOMessage)[0] == 200:
-                            self.contactsDict[contact_id]['askedFIO'] = True #Changing dictionary only if message posting was succesful(code 200)
+                        #Get user's mesggages and ask for FIO if needed
+                        messageReq = self.localBitcoinObject.getContactMessages(contact_id)
+                        messages = messageReq['message_list']
+                        self.contactsDict[contact_id]['buyerMessages'] = [msg['msg'] for msg in messages if msg['sender']['username'] != myUserName]
+                        if not self.contactsDict[contact_id]['askedFIO'] and len(self.contactsDict[contact_id]['buyerMessages']) == 0:
+                            #There could be better way of determining if user sent his name
+                            if self.localBitcoinObject.postMessageToContact(contact_id, message=askForFIOMessage)[0] == 200:
+                                self.contactsDict[contact_id]['askedFIO'] = True #Changing dictionary only if message posting was succesful(code 200)
 
 
     def get_logger(self):

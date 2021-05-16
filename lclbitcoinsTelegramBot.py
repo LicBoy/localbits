@@ -1,4 +1,5 @@
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, ParseMode, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.error import NetworkError
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
                           ConversationHandler, PicklePersistence)
 
@@ -51,7 +52,7 @@ class TelegramBot:
         self.releaseDict[contact_id] = {'amount' : amount, 'buyerMessages' : messages}
         curKeyRegExp = f"(^{contact_id}$)|"
         self.contactsRegex += curKeyRegExp
-        botText = str(f"Payment completed:\n<b>{contact_id}</b> - <b>{self.releaseDict[contact_id]['amount']}</b>RUB - " + "; ".join(self.releaseDict[contact_id]['buyerMessages']) + "\n")
+        botText = str(f"Payment completed:\n<b>{contact_id}</b> - <b>{self.releaseDict[contact_id]['amount']}</b> RUB - " + "; ".join(self.releaseDict[contact_id]['buyerMessages']) + "\n")
 
         self.dispatcher.add_handler(MessageHandler(Filters.regex(self.contactsRegex), self.chooseContactsToRelease))
         self.sendMessageWithConnectionCheck(chat_id=self.chatID, text=botText,
@@ -342,7 +343,6 @@ class TelegramBot:
     It's needed to resend message if error occured.
     """
 
-    #NEEDED TO BE REWRITED! NEED to catch special exception!
     def sendMessageWithConnectionCheck(self,
                                        chat_id,
                                        text,
@@ -350,11 +350,11 @@ class TelegramBot:
                                        parse_mode : ParseMode = None):
         try:
             return self.updater.bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup, parse_mode=parse_mode)
-        except urllib3.exceptions.HTTPError as connectionExc:
+        except NetworkError as connectionExc:
             print(f"Connection aborted while trying to send {text} to {chat_id}, probably connection timeout.\nResending message...\n", connectionExc)
             return self.sendMessageWithConnectionCheck(chat_id, text, reply_markup, parse_mode)
         except Exception as exc:
-            print(f"Other ERROR occured while sending telegram message!\n", exc)
+            print(f"Other ERROR occured while sending telegram message!\n", exc.with_traceback())
 
     """
     Cosmetic helper function returning status 
