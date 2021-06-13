@@ -23,6 +23,8 @@ class TelegramBot:
         self.dispatcher = self.updater.dispatcher
         self.localBitcoinObject = localBitcoinObject
         self.releaseDict = {}
+        self.recentBuyAdsWithTime = (None, None)
+        self.recentSellAdsWithTime = (None, None)
 
         #This info strongly connected with bot's implementation
         self.worksDictionary = {
@@ -323,7 +325,7 @@ class TelegramBot:
     def main(self):
         self.sendMessageWithConnectionCheck(self.chatID, text="Licman's LocalBitcoins helper bot started!")
 
-    """
+    """ 
     /start command handler
      """
 
@@ -343,6 +345,9 @@ class TelegramBot:
     It's needed to resend message if error occured.
     """
 
+    def sendBotErrorMessage(self, msg):
+        self.sendMessageWithConnectionCheck(self.chatID, msg)
+
     def sendMessageWithConnectionCheck(self,
                                        chat_id,
                                        text,
@@ -351,10 +356,10 @@ class TelegramBot:
         try:
             return self.updater.bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup, parse_mode=parse_mode)
         except NetworkError as connectionExc:
-            print(f"Connection aborted while trying to send {text} to {chat_id}, probably connection timeout.\nResending message...\n", connectionExc)
+            print(f"Connection aborted while trying to send {text} to {chat_id}, probably connection timeout.\n", connectionExc, "\nResending message...\n")
             return self.sendMessageWithConnectionCheck(chat_id, text, reply_markup, parse_mode)
         except Exception as exc:
-            print(f"Other ERROR occured while sending telegram message!\n", exc.with_traceback())
+            print(f"Other ERROR occured while sending telegram message!\n", exc)
 
     """
     Cosmetic helper function returning status 

@@ -10,8 +10,8 @@ from localbits import tokens    # !!!PERSONAL DATA
 
 key = tokens.key
 secret = tokens.secret
-online_buy = tokens.online_buy      #YOU BUY HERE
-online_sell = tokens.online_sell     #YOU SELL HERE
+online_buy = tokens.online_buy          #YOU BUY HERE
+online_sell = tokens.online_sell        #YOU SELL HERE
 myUserName = tokens.myUserName
 ruslanSberCardMessage = tokens.ruslanSberCardMessage
 ayratSberCardMessage = tokens.ayratSberCardMessage
@@ -23,6 +23,9 @@ askForFIOMessage = 'фио?'
 ignoreList = ['Nikitakomp7', 'Ellenna', 'DmitriiGrom']                  #They usually invisible on BUY page
 botsList = ['13_drunk_soul_13', 'Klaik', 'Slonya', 'DmitriiGrom']        #They are bots on SELL page
 invisibleList = ['erikdar7777']
+VALID_ADS_TYPES = {'buy', 'sell'}
+ADS_LIVE_TIME = 10.0
+lastUsedFloat = 0
 
 """
 Base class for running bot
@@ -53,13 +56,8 @@ class LocalBitcoinBot:
         return (reSearchSber and not reSearchVtb and not reSearchAlpha and not reSearchRoket and not reSearchTink and not reSearchRaif)
 
     #Get ads from online_buy category, U BUY HERE
-    def getListOfBuyAds(self, myLimits=[10000, 50000]): #returns list of dictionaried ads
-        req = requests.get(self.localBitcoinObject.baseurl + '/sell-bitcoins-online/sberbank/.json')
-        while int(req.status_code) != 200:
-            req = requests.get(self.localBitcoinObject.baseurl + '/sell-bitcoins-online/sberbank/.json')
-        ads = json.loads(req.text)['data']['ad_list']
-
-        printCounter = 5 #Show only 5 ads in logger, but get all ads in list
+    def getListOfBuyAds(self, myLimits=[10000, 50000]) -> list: #returns list of dictionaried ads
+        ads = self.returnRecentAds('buy')
         vals = []
         for ad in ads:
             ad = ad['data']
@@ -70,66 +68,54 @@ class LocalBitcoinBot:
             max_amount = float(ad['max_amount_available'])
             username = ad['profile']['username']
             if max_amount > myLimits[0] and username not in ignoreList: #can be improved
-                if printCounter > 0:
-                    logger.debug(f"BUY: {ad['temp_price']} {username}")
-                    printCounter -= 1
                 vals.append(ad)
         return vals
 
     #Get ads from online_sell category, U SELL HERE
-    def getListOfSellAdsPrices(self, adsAmount = 7): #returns list of float prices
+    def getListOfSellAds(self, adsAmount = 7) -> list: #returns list of dictionaried ads
         n = adsAmount
         vals = []
-        req = requests.get(self.localBitcoinObject.baseurl + '/buy-bitcoins-online/sberbank/.json')
-        while int(req.status_code != 200):
-            req = requests.get(self.localBitcoinObject.baseurl + '/buy-bitcoins-online/sberbank/.json')
-        js = json.loads(req.text)['data']['ad_list']
-        for ad in js:
+        ads = self.returnRecentAds('sell')
+        for ad in ads:
             ad = ad['data']
             if ad['min_amount'] is None or ad['max_amount_available'] is None:
                 continue
 
             min_amount = float(ad['min_amount'])
-            max_amount = float(ad['max_amount_available'])
-            temp_price = float(ad['temp_price'])
+            max_amount_available = float(ad['max_amount_available'])
             username = ad['profile']['username']
-            if min_amount <= 2560 and max_amount >= 3768 and username not in botsList:
-                if n>0:
-                    #print(username, max_amount, end= " ")
-                    logger.debug(f"SELL: {str(temp_price)} {username}")
-                    vals.append(temp_price)
-                    n-=1
-                else:
-                    return vals
-        #Return top 7 or less sell ads from 1st page
+            if min_amount <= 2560 and max_amount_available >= 3768 and username not in botsList:
+                if n > 0:
+                    vals.append(ad)
+                    n -= 1
+                else: break
+        #Return top n or less amount of ads from 1st page
         return vals
 
-    def countGoodPriceForBUY(self, sellPrices, buyPrices, spreadDif=100000, minDif=50000):
+    def countGoodPriceForBUY(self, sellAds : list, buyAds : list, spreadDif=100000, minDif=50000):
         medPrice = 0; disp = 0
-        amount = len(sellPrices)
-        for price in sellPrices:
+        sellAdsPrices = [float(ad['temp_price']) for ad in sellAds]
+        amount = len(sellAdsPrices)
+        for price in sellAdsPrices:
             medPrice += price
         medPrice = medPrice / amount
-        for price in sellPrices:
-            disp += pow(abs(price - medPrice), 2)
+        for price in sellAdsPrices:
+            disp += (price - medPrice) ** 2
         disp = disp / amount
         disp = math.sqrt(disp)
 
         #print(medPrice, disp)
         logger.debug(f"Calculated medprice = {medPrice}, disp = {disp}")
         resPrice = medPrice + disp - spreadDif
-        if sellPrices[0] - resPrice < minDif:
-            resPrice = sellPrices[0] - minDif
+        if sellAdsPrices[0] - resPrice < minDif:
+            resPrice = sellAdsPrices[0] - minDif
 
-        for ad in buyPrices:
+        for ad in buyAds:
             if float(ad['temp_price']) < resPrice and ad['profile']['username'] != myUserName:
                 resPrice = float(ad['temp_price']) + 2
                 break
         resPrice = math.ceil(resPrice)
-        print(f"New SELL price is - {resPrice},  {datetime.datetime.now().strftime('%H:%M:%S %d.%m')}")
-
-        self.localBitcoinObject.sendRequest(f'/api/ad-equation/{online_buy}/', params={'price_equation': str(resPrice)
-        }, method='post')
+        return resPrice
 
     def checkDashboardForNewContacts(self, msg, start=False):
         if msg == 'me': msg = ruslanSberCardMessage
@@ -137,7 +123,7 @@ class LocalBitcoinBot:
         elif msg == 'ayrat': msg = ayratSberCardMessage
 
         hasCompletedPayment = False
-        completedMessagesText = "Completed messages:\n"
+        completedMessagesText = "Completed payments:\n"
         for contact_id in list(self.contactsDict):
             contactReq = self.localBitcoinObject.getContactInfo(contact_id)
             if contactReq['closed_at'] or contactReq['disputed_at']:
@@ -151,7 +137,7 @@ class LocalBitcoinBot:
             self.telegramBotObject.releaseDict = {}
             self.telegramBotObject.contactsRegex = r'(^All$)|'
 
-        if completedMessagesText != "Completed messages:\n":
+        if completedMessagesText != "Completed payments:\n":
             print(completedMessagesText)
 
         dashBoard = self.localBitcoinObject.sendRequest('/api/dashboard/seller/', '', 'get')
@@ -195,6 +181,55 @@ class LocalBitcoinBot:
                             if self.localBitcoinObject.postMessageToContact(contact_id, message=askForFIOMessage)[0] == 200:
                                 self.contactsDict[contact_id]['askedFIO'] = True #Changing dictionary only if message posting was succesful(code 200)
 
+    def returnRecentAds(self, adsType : str):
+        if adsType not in VALID_ADS_TYPES:
+            raise ValueError(f"Haven't found VALID worktype with value {adsType}!\nCheck that you return ads correctly!")
+        curTime = time.time()
+        printAmount = 10
+        if adsType == 'buy':
+            recentBuyAdsWithTime = self.telegramBotObject.recentBuyAdsWithTime
+            if recentBuyAdsWithTime[1] is None or curTime - recentBuyAdsWithTime[1] > ADS_LIVE_TIME:
+                response = requests.get(self.localBitcoinObject.baseurl + '/sell-bitcoins-online/sberbank/.json')
+                while int(response.status_code) != 200:
+                    response = requests.get(self.localBitcoinObject.baseurl + '/sell-bitcoins-online/sberbank/.json')
+                ads = response.json()['data']['ad_list']
+                for ad in ads:
+                    ad = ad['data']
+                    if printAmount > 0:
+                        logger.debug(f"BUY: {ad['profile']['username']} : {ad['temp_price']} | {ad['min_amount']}-{ad['max_amount_available']}")
+                        printAmount -= 1
+                    else: break
+                curTime = time.time()
+                #print(f"{time.strftime('%d.%m %H:%M:%S')} Updated the recent BUY ads")
+                self.telegramBotObject.recentBuyAdsWithTime = (ads, curTime)
+            return self.telegramBotObject.recentBuyAdsWithTime[0]
+        else:
+            recentSellAdsWithTime = self.telegramBotObject.recentSellAdsWithTime
+            if recentSellAdsWithTime[1] is None or curTime - recentSellAdsWithTime[1] > ADS_LIVE_TIME:
+                response = requests.get(self.localBitcoinObject.baseurl + '/buy-bitcoins-online/sberbank/.json')
+                while int(response.status_code) != 200:
+                    response = requests.get(self.localBitcoinObject.baseurl + '/buy-bitcoins-online/sberbank/.json')
+                ads = response.json()['data']['ad_list']
+                for ad in ads:
+                    ad = ad['data']
+                    if ad['min_amount'] is None or ad['max_amount_available'] is None:
+                        continue
+                    if float(ad['min_amount']) <= 2560 and float(ad['max_amount_available']) >= 3768 and ad['profile']['username'] not in botsList:
+                        if printAmount > 0:
+                            logger.debug(f"SELL: {ad['profile']['username']} : {ad['temp_price']} | {ad['min_amount']}-{ad['max_amount_available']}")
+                            printAmount -= 1
+                        else: break
+                curTime = time.time()
+                #print(f"{time.strftime('%d.%m %H:%M:%S')} Updated the recent SELL ads")
+                self.telegramBotObject.recentSellAdsWithTime = (ads, curTime)
+            return self.telegramBotObject.recentSellAdsWithTime[0]
+
+    def waitedToPrint(self, lastCall:float):
+        global lastUsedFloat
+        if lastCall != lastUsedFloat:
+            lastUsedFloat = lastCall
+            return True
+        return False
 
     def get_logger(self):
         logger = logging.getLogger()
@@ -208,29 +243,22 @@ class LocalBitcoinBot:
         logger.addHandler(fh)
         return logger
 
-    def executeAll(self, border, sberMsg, spreadDif=100000):
-        self.buying(spreadDif)
-        self.selling(border)
-        self.checkDashboardForNewContacts(sberMsg)
-
     #NEW
     def buying(self, spreadDif):
         myBuyAdd = self.localBitcoinObject.getAdInfo(online_buy)
         myLimits = [float(myBuyAdd['min_amount']), float(myBuyAdd['max_amount'])]
-        sell_Ads = self.getListOfSellAdsPrices(adsAmount=5)
+        sell_Ads = self.getListOfSellAds(adsAmount=5)
         buy_Ads = self.getListOfBuyAds(myLimits)
-        self.countGoodPriceForBUY(sell_Ads, buy_Ads, spreadDif=spreadDif, minDif=50000)
+        resPrice = self.countGoodPriceForBUY(sell_Ads, buy_Ads, spreadDif=spreadDif, minDif=50000)
+        print(f"{datetime.datetime.now().strftime('%d.%m %H:%M:%S')} NEW BUY price is {resPrice}!")
+        self.localBitcoinObject.sendRequest(f'/api/ad-equation/{online_buy}/', params={'price_equation': str(resPrice)
+                                                                                       }, method='post')
 
     #Developing
     def selling(self, border):
-        ads = requests.get(self.localBitcoinObject.baseurl + '/buy-bitcoins-online/sberbank/.json')
-        while int(ads.status_code) != 200:
-            print("Couldn't get ads. Code:", ads.status_code, ads.text, "trying to get ads again...")
-            time.sleep(1)
-            ads = requests.get(self.localBitcoinObject.baseurl + '/buy-bitcoins-online/sberbank/.json')
-        js = json.loads(ads.text)['data']['ad_list']
+        ads = self.returnRecentAds('sell')
         myPrice = 0
-        for ad in js:
+        for ad in ads:
             ad = ad['data']
             if ad['min_amount'] is None or ad['max_amount_available'] is None:
                 continue
@@ -253,15 +281,17 @@ class LocalBitcoinBot:
 
     def scanning(self):
         buyAds = self.getListOfBuyAds()[0:5]
-        sellAds = self.getListOfSellAdsPrices(3)
+        sellAds = self.getListOfSellAds(3)
         buyAdsPrices = [float(x['temp_price']) for x in buyAds]
+        sellAdsPrices = [float(x['temp_price']) for x in sellAds]
 
         buyAverage = round(sum(buyAdsPrices) / len(buyAdsPrices))
-        sellAverage = round(sum(sellAds) / len(sellAds))
+        sellAverage = round(sum(sellAdsPrices) / len(sellAdsPrices))
         curDifference = sellAverage - buyAverage
-        print(f'{datetime.datetime.now().strftime("%d.%m %H:%M:%S")} Scanning localbitcoins: ... {curDifference}')
-        if curDifference > 195000:
-            winsound.MessageBeep()
+        if self.waitedToPrint(self.telegramBotObject.recentBuyAdsWithTime[1]):
+            if curDifference > 120000:
+                winsound.MessageBeep()
+            print(f'{datetime.datetime.now().strftime("%d.%m %H:%M:%S")} Scanning localbitcoins: ... {curDifference}')
 
     def chooseWorkType(self):   #User input function to define type of work
         pass
@@ -313,13 +343,12 @@ if __name__ == "__main__":
     logger = localbitcoinsBot.get_logger()
     while True:
         try:
-            localbitcoinsBot.telegramBotObject.updater.start_polling()
+            #localbitcoinsBot.telegramBotObject.updater.start_polling()
             with open('logs.log', 'w'): pass #Clearing log file
             if cardMessageNeeded:
                 localbitcoinsBot.checkDashboardForNewContacts(localbitcoinsBot.telegramBotObject.worksDictionary['sell']['cardMessage'], start=True)
             while True:
                 for workKey in localbitcoinsBot.telegramBotObject.worksDictionary.keys():
-                    #print(curWork, boolean)
                     if localbitcoinsBot.telegramBotObject.worksDictionary[workKey]['status'] == True:
                         if workKey == 'sell':
                             localbitcoinsBot.selling(localbitcoinsBot.telegramBotObject.worksDictionary['sell']['sellBorder'])
@@ -328,19 +357,9 @@ if __name__ == "__main__":
                             localbitcoinsBot.buying(localbitcoinsBot.telegramBotObject.worksDictionary['buy']['buyDifference'])
                         elif workKey == 'scanning':
                             localbitcoinsBot.scanning()
-            """
-            while time.time() < time.time() + workTime:
-                if workType == 'all': localbitcoinsBot.executeAll(border=sellBorder, sberMsg=sberMessage, spreadDif=curSpread)
-                elif workType == 'contacts': localbitcoinsBot.checkDashboardForNewContacts(sberMessage)
-                elif workType == 'sell':
-                    localbitcoinsBot.selling(sellBorder)
-                    localbitcoinsBot.checkDashboardForNewContacts(sberMessage)
-                elif workType == 'buy': localbitcoinsBot.buying(curSpread)
-                elif workType == "scanning": localbitcoinsBot.scanning()
-            """
         except Exception as exc:
             exc_type, exc_value, exc_traceback = sys.exc_info()
-            print(f"Some shit happened at  {datetime.datetime.now().strftime('%d.%m %H:%M:%S')}  restarting after 5 sec...")
-            print(exc)
+            localbitcoinsBot.telegramBotObject.sendBotErrorMessage(f"LocalBot Error happened at  {datetime.datetime.now().strftime('%d.%m %H:%M:%S')}  restarting after 5 sec...")
+            print(f"Some shit happened at  {datetime.datetime.now().strftime('%d.%m %H:%M:%S')}  restarting after 5 sec...\n", exc)
             traceback.print_exception(exc_type, exc_value, exc_traceback, limit=2, file=sys.stdout)
             time.sleep(5)
