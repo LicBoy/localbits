@@ -1,9 +1,11 @@
-from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, ParseMode, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import Update, ParseMode, ReplyKeyboardMarkup, ReplyKeyboardRemove,\
+    InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.error import NetworkError
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
-                          ConversationHandler, PicklePersistence)
+                          ConversationHandler, PicklePersistence, CallbackContext, CallbackQueryHandler)
 
-from localbits.tokens import telegramBotToken, telegramChatID, online_buy, online_sell
+from localbits.tokens import telegramBotToken, telegramChatID, online_buy, online_sell, myUserName,\
+    ruslanSberCardMessage, momSberCardMessage, ayratSberCardMessage
 from localbits.localbitcoins import LocalBitcoin
 
 import re, time, datetime, urllib3
@@ -22,9 +24,6 @@ class TelegramBot:
         self.updater = Updater(self.token)
         self.dispatcher = self.updater.dispatcher
         self.localBitcoinObject = localBitcoinObject
-        self.releaseDict = {}
-        self.recentBuyAdsWithTime = (None, None)
-        self.recentSellAdsWithTime = (None, None)
 
         #This info strongly connected with bot's implementation
         self.worksDictionary = {
@@ -32,6 +31,18 @@ class TelegramBot:
             'buy' : {'status' : False, 'buyDifference' : None},
             'scanning' : {'status' : False}
         }
+        """
+        Dictionary with contacts' info
+        """
+        self.contactsDictionary = {}
+
+        """
+        Dictionary with different banks' ads' list of dicts, adType and time of receiving this ads
+        Example {'sberbank' : {'sell' : {'ads' : [adDict1, adDict2, ..., adDictN], 'time' : 2200000}}}
+        Main key('sberbank') is bank's name, 'sell' is ad type, 
+        'ads' is a list of dictionaries with every ad info, 'time' is last time.time() of receiving the ads.
+        """
+        self.recentAdsDictionary = {}
 
         self.dispatcher.add_handler(CommandHandler('start', self.start))
         self.dispatcher.add_handler(CommandHandler('help', self.help))
@@ -40,68 +51,279 @@ class TelegramBot:
         self.dispatcher.add_handler(CommandHandler('switchwork', self.switchWork))
         self.dispatcher.add_handler(CommandHandler('changeborder', self.changeBorder))
 
-    """
-    Get dictionary of completed payments from main function
-    and send this contacts to user.
-    
-    Given Dictionary has following structure:
-        contactsDict[contact_id] = {
-                    'amount' : contact['amount']
-                    'buyerMessages' : [],
-                }
-    """
-    def addCompletedPayment(self, contact_id, amount, messages):
-        self.releaseDict[contact_id] = {'amount' : amount, 'buyerMessages' : messages}
-        curKeyRegExp = f"(^{contact_id}$)|"
-        self.contactsRegex += curKeyRegExp
-        botText = str(f"Payment completed:\n<b>{contact_id}</b> - <b>{self.releaseDict[contact_id]['amount']}</b> RUB - " + "; ".join(self.releaseDict[contact_id]['buyerMessages']) + "\n")
+        self.lastCallbackQuery = '' #String needed for remembering last query callback
+        self.feedbackMessageHandler = MessageHandler(filters = Filters.text & ~Filters.command,
+                                                     callback=self.get_reputation_message_callback)
+        self.sendMessageHandler = MessageHandler(filters=(Filters.text | Filters.document.category('image')) & ~Filters.command,
+                                                 callback=self.get_message_send_message_callback)
+        self.dispatcher.add_handler(CallbackQueryHandler(self.getReleaseCallback, pattern='^release_\S+$'))
+        self.dispatcher.add_handler(CallbackQueryHandler(self.change_reputation_callback, pattern='^reputation_'))
+        self.dispatcher.add_handler(CallbackQueryHandler(self.send_message_callback, pattern='^message_\S+$'))
+        self.testDict = {
+            '777' : {
+                        'sentCard' : True,
+                        'askedFIO': True,
+                        'payment_completed' : True,
+                        'buyerMessages' : ['Hi', 'Paid'],
+                        'amount' : '777',
+                        'tobe_deleted' : False
+            }
+        }
 
-        self.dispatcher.add_handler(MessageHandler(Filters.regex(self.contactsRegex), self.chooseContactsToRelease))
-        self.sendMessageWithConnectionCheck(chat_id=self.chatID, text=botText,
-                                            reply_markup=self.generateReplyKeyboard(self.releaseDict),
+    def checkDashboardForNewContacts(self, msg, start=False):
+        for contact_id in list(self.contactsDictionary):
+            if self.contactsDictionary[contact_id]['tobe_deleted']:
+                print(f"Contact {contact_id} is closed, dict updated")
+                del self.contactsDictionary[contact_id]
+
+        dashBoard = self.localBitcoinObject.sendRequest('/api/dashboard/seller/', '', 'get')
+        for contact in dashBoard['contact_list']:
+            contact = contact['data']
+            contact_id = str(contact['contact_id'])
+            username = contact['buyer']['username']
+            paymentCompleted = contact['payment_completed_at'] is not None
+            if not contact['disputed_at']:
+                if start == True:
+                    self.contactsDictionary[contact_id] = {
+                        'username' : username,
+                        'sentCard' : True,
+                        'askedFIO': True,
+                        'payment_completed' : paymentCompleted,
+                        'buyerMessages' : [],
+                        'amount' : contact['amount'],
+                        'is_releasing' : False,
+                        'tobe_deleted' : False
+                    }
+                else:
+                    if contact_id not in self.contactsDictionary:
+                        self.contactsDictionary[contact_id] = {
+                            'username' : username,
+                            'sentCard': False,
+                            'askedFIO' : False,
+                            'payment_completed': paymentCompleted,
+                            'buyerMessages': [],
+                            'amount': contact['amount'],
+                            'is_releasing': False,
+                            'tobe_deleted' : False,
+                        }
+                        postMessageRequest = self.localBitcoinObject.postMessageToContact(contact_id, msg)
+                        if postMessageRequest[0] == 200:
+                            self.contactsDictionary[contact_id]['sentCard'] = True #Changing dictionary only if message posting was succesful(code 200)
+                            print('New contact: ', contact_id)
+                    else:
+                        self.contactsDictionary[contact_id]['payment_completed'] = paymentCompleted
+                        messageReq = self.localBitcoinObject.getContactMessages(contact_id)
+                        newMessages = messageReq['message_list']
+                        newMessages = [msg['msg'] for msg in newMessages if msg['sender']['username'] != myUserName]
+                        amountOfNewMessages = len(newMessages) - len(self.contactsDictionary[contact_id]['buyerMessages'])
+                        self.contactsDictionary[contact_id]['buyerMessages'] = newMessages
+                        if amountOfNewMessages > 0:
+                            self.sendNewMessageFromUserMessage(contact_ID=contact_id, amountOfNewMessages=amountOfNewMessages)
+                        if paymentCompleted:
+                            # Get user's messages and ask for FIO if needed
+                            if not self.contactsDictionary[contact_id]['askedFIO'] and len(
+                                    self.contactsDictionary[contact_id]['buyerMessages']) == 0:
+                                # There could be better way of determining if user sent his name
+                                if self.localBitcoinObject.postMessageToContact(contact_id, message='инициалы?')[0] == 200:
+                                    self.contactsDictionary[contact_id][
+                                        'askedFIO'] = True  # Changing dictionary only if message posting was succesful(code 200)
+        completedPayments = set([key for key in list(self.contactsDictionary) if self.contactsDictionary[key]['payment_completed']])
+        for key in completedPayments:
+            self.sendCompletedPaymentMessage(key)
+
+    def sendCompletedPaymentMessage(self, contact_ID: str):
+        botText = str(f"Payment completed:\n\n<i>ID{contact_ID}</i> - <b>{self.contactsDictionary[contact_ID]['amount']}</b> RUB - " + "; ".join(self.contactsDictionary[contact_ID]['buyerMessages']) + "\n")
+        replyMarkup = self.get_payment_keyboard(contact_ID)
+        if not self.contactsDictionary[contact_ID]['tobe_deleted']:
+            msg_ID = self.sendMessageWithConnectionCheck(chat_id=self.chatID, text=botText,
+                                            reply_markup=replyMarkup,
+                                            parse_mode=ParseMode.HTML).message_id
+            if self.contactsDictionary[contact_ID]['is_releasing']:
+                self.updater.bot.delete_message(chat_id=self.chatID, message_id=msg_ID)
+
+    def sendNewMessageFromUserMessage(self, contact_ID: str, amountOfNewMessages: int):
+        botText = f"<i>ID {contact_ID}</i> | <b>{self.contactsDictionary[contact_ID]['amount']}</b> RUB |" \
+                  f"<b>{self.contactsDictionary[contact_ID]['username']}</b> send message(s):\n\n"
+        for msg in self.contactsDictionary[contact_ID]['buyerMessages'][-amountOfNewMessages:]:
+            botText += ('<i>' + msg + '</i>\n')
+        keyboard = [[]]
+        if self.contactsDictionary[contact_ID]['payment_completed']:
+            keyboard[0].append(InlineKeyboardButton("Release 💸", callback_data=f"release_{contact_ID}"))
+        keyboard[0].append(InlineKeyboardButton("Message 💬", callback_data=f"message_{contact_ID}_{self.contactsDictionary[contact_ID]['username']}"))
+        replyMarkup = InlineKeyboardMarkup(keyboard)
+        self.sendMessageWithConnectionCheck(chat_id=self.chatID,
+                                            text=botText,
+                                            reply_markup=replyMarkup,
                                             parse_mode=ParseMode.HTML)
 
-    """
-    Generates keyboard for contacts in dictionary of completed payments with 'all' option to release all contacts.
-    """
-    def generateReplyKeyboard(self, dict):
-        replyKeyboard = [[key for key in list(dict)]] + [['All']]
-        markup = ReplyKeyboardMarkup(replyKeyboard, one_time_keyboard=True)
-        return markup
-
-    """
-    Function to get user's message of contacts to be released.
-    Then release contacts one by one using defined function.
-    """
-    def chooseContactsToRelease(self, update, context):
-        userMessage = update.message.text
-        if userMessage == "All":
-            for key in list(self.releaseDict):
-                self.releaseContact(key)
+    def getReleaseCallback(self, update: Update, context: CallbackContext):
+        query = update.callback_query
+        contact_ID = query.data.split('_')[1]
+        self.contactsDictionary[contact_ID]['is_releasing'] = True
+        query.edit_message_text("Releasing contact...🕒", reply_markup=self.get_payment_keyboard(contact_ID))
+        wasReleased = self.releaseContact(contact_ID)
+        if wasReleased:
+            query.edit_message_text(
+                f"✅ <i>ID {contact_ID}</i> | <b>{self.contactsDictionary[contact_ID]['amount']}</b> RUB with "
+                f"user <b>{self.contactsDictionary[contact_ID]['username']}</b> released.\n\n"
+                f"You can leave your feedback for this user:",
+                reply_markup=self.get_payment_keyboard(contact_ID, wasReleased=True),
+            parse_mode=ParseMode.HTML)
         else:
-            self.releaseContact(userMessage)
+            query.edit_message_text(
+                f"❌ <i>ID {contact_ID}</i> | <b>{self.contactsDictionary[contact_ID]['amount']}</b> RUB couldn't release",
+                reply_markup=self.get_payment_keyboard(contact_ID), parse_mode=ParseMode.HTML)
+        query.answer()
 
     """
     Beautiful way of releasing contact using Localbitcoins's function of releasing.
     """
-    def releaseContact(self, contactID):
-        reply_text = f"Trying to release contact {contactID}..."
-        messageID = self.sendMessageWithConnectionCheck(chat_id=self.chatID, text=reply_text).message_id
+    def releaseContact(self, contactID) -> bool:
         st_code = self.localBitcoinObject.contactRelease(contactID)[0]
         if st_code == 200:
-            reply_text = f"Contact {contactID} release - success✅!"
-            del self.releaseDict[contactID]
+            self.contactsDictionary[contactID]['tobe_deleted'] = True
+            return True
+        return False
+
+
+    def send_message_callback(self, update: Update, context: CallbackContext):
+        query = update.callback_query
+        self.lastCallbackQuery = query
+        query.answer()
+        keyboard = [['Отмена']]
+        markup = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+        msg = '💬 Input your message:'
+        self.dispatcher.add_handler(self.sendMessageHandler)
+        self.sendMessageWithConnectionCheck(chat_id=update.effective_chat.id,
+                                            text=msg,
+                                            reply_markup=markup)
+
+    def get_message_send_message_callback(self, update: Update, context: CallbackContext):
+        self.dispatcher.remove_handler(self.sendMessageHandler)
+        messageText = update.message.text
+        replyMsg = ''
+        if messageText == 'Отмена':
+            replyMsg = '❌ Canceled sending message.'
         else:
-            reply_text = f"Contact {contactID} release - fail❌!"
-        self.updater.bot.delete_message(chat_id=self.chatID, message_id=messageID)
-        markup = None
-        if len(self.releaseDict) == 0:
-            markup = ReplyKeyboardRemove()
-        self.sendMessageWithConnectionCheck(chat_id=self.chatID, text=reply_text, reply_markup=markup)
+            contact_ID = self.lastCallbackQuery.split("_")[1]
+            username = self.lastCallbackQuery.split("_", 2)[2]
+            replyMsg = 'Sending message...🕒'
+            msg_ID = self.sendMessageWithConnectionCheck(chat_id=update.effective_chat.id,
+                                                text=replyMsg).message_id
+            if self.localBitcoinObject.postMessageToContact(contact_id=contact_ID, message=messageText)[0] == 200:
+                replyMsg = f"💬 Your message was sent to user <b>{username}</b>."
+            else:
+                replyMsg = f"❌ For some reason message wasn\'t sent to user <b>{username}</b>."
+            self.updater.bot.delete_message(chat_id=update.effective_chat.id, message_id=msg_ID)
+        self.sendMessageWithConnectionCheck(chat_id=update.effective_chat.id,
+                                            text=replyMsg,
+                                            reply_markup=ReplyKeyboardRemove(),
+                                            parse_mode=ParseMode.HTML)
 
-        if len(self.releaseDict) == 0:
-            self.contactsRegex = r'(^All$)|'
 
+    def get_reputation_message_callback(self, update: Update, context: CallbackContext):
+        print("Removed message handler for feedback!")
+        self.dispatcher.remove_handler(self.feedbackMessageHandler)
+        repStatus = self.lastCallbackQuery.split("_")[1]
+        username = self.lastCallbackQuery.split("_", 2)[2]
+        print("Entered message callback, got", update.effective_chat.id, update.message.text)
+        text = update.message.text
+        if text == 'Без комментария':
+            text = None
+        else:
+            text += ' | QLicman'
+        if repStatus == 'bad':
+            repStatus = 'block'
+        msgText = 'Sending feedback...🕒'
+        msg_ID = self.sendMessageWithConnectionCheck(text=msgText,
+                                                     chat_id=update.effective_chat.id,
+                                                     reply_markup=ReplyKeyboardRemove()).message_id
+        if self.localBitcoinObject.postFeedbackToUser(username=username, feedback=repStatus, msg=text)[0] == 200:
+            msgText = f"✅ Your feedback was sent to user <b>{username}</b>."
+        else:
+            msgText = f"❌ Couldn't send feedback to user <b>{username}</b>"
+        self.updater.bot.delete_message(chat_id=update.effective_chat.id, message_id=msg_ID)
+        self.sendMessageWithConnectionCheck(chat_id=update.effective_chat.id,
+                                            text=msgText)
+
+
+    def change_reputation_callback(self, update: Update, context: CallbackContext):
+        query = update.callback_query
+        self.lastCallbackQuery = query.data
+        print("Current feedback is", self.lastCallbackQuery)
+        reputationStatus = query.data.split("_")[1]
+        username = query.data.split("_", 2)[2]
+        if reputationStatus == 'block': #If message is not needed
+            msgText = ''
+            if self.localBitcoinObject.postFeedbackToUser(username=username, feedback='block_without_feedback', msg=None)[0] == 200:
+                msgText = f"{query.message.text} You have blocked user <b>{username}</b>"
+            else:
+                msgText = f"❌ Couldn't block user <b>{username}</b>"
+            self.sendMessageWithConnectionCheck(chat_id=update.effective_chat.id,
+                                                text=msgText,
+                                                parse_mode=ParseMode.HTML)
+        else:   #If message is needed for feedback
+            self.getReputationMessage(update, context)
+
+    def getReputationMessage(self, update: Update, context: CallbackContext):
+        query = update.callback_query
+        reputationStatus = query.data.split("_")[1]
+        username = query.data.split("_", 2)[2]
+        button_1, button_2 = '', ''
+        if reputationStatus == 'trust':
+            button_1, button_2 = 'Быстро и надёжно!', 'Надёжный покупатель.'
+        elif reputationStatus == 'positive':
+            button_1, button_2 = 'Всё хорошо!', 'Сделка прошла хорошо.'
+        elif reputationStatus == 'neutral':
+            button_1, button_2 = 'Нормально', 'Нечего сказать...'
+        elif reputationStatus == 'bad':
+            button_1, button_2 = 'Ужасная сделка!', 'Лучше блокируйте.'
+        button_1, button_2 = button_1 + ' | ' + myUserName, button_2 + ' | ' + myUserName
+        keyboard = [
+            [button_1, button_2],
+            ['Без комментария']
+        ]
+        if reputationStatus == 'bad':
+            keyboard = [
+                [button_1, button_2]
+            ]
+        query.answer()
+        markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
+        icon =''
+        for buttonRow in query.message['reply_markup']['inline_keyboard']:
+            for button in buttonRow:
+                if reputationStatus in button['callback_data']:
+                    icon = button['text']
+        print("Added message handler for feedback!")
+        self.dispatcher.add_handler(self.feedbackMessageHandler)
+        self.sendMessageWithConnectionCheck(chat_id=update.effective_chat.id,
+                                            text=icon + '💬' + f" Feedback comment for user <b>{username}</b>:",
+                                            reply_markup=markup,
+                                            parse_mode=ParseMode.HTML)
+
+    def get_payment_keyboard(self, contact_ID: str, wasReleased: bool = False) -> InlineKeyboardMarkup:
+        username = self.contactsDictionary[contact_ID]['username']
+        if not wasReleased:
+            keyboard = [
+                [
+                    InlineKeyboardButton("Release 💸", callback_data=f"release_{contact_ID}"),
+                    InlineKeyboardButton("Message 💬", callback_data=f"message_{contact_ID}_{username}")
+                ]
+            ]
+        else:
+            keyboard = [
+                [
+                    InlineKeyboardButton("😁", callback_data=f"reputation_trust_{username}"),
+                    InlineKeyboardButton("😃", callback_data=f"reputation_positive_{username}"),
+                    InlineKeyboardButton("😐", callback_data=f"reputation_neutral_{username}"),
+                    InlineKeyboardButton("😡", callback_data=f"reputation_bad_{username}"),
+                    InlineKeyboardButton("🚫", callback_data=f"reputation_block_{username}"),
+                ],
+                [
+                    InlineKeyboardButton("Message 💬", callback_data=f"message_{contact_ID}_{username}")
+                ]
+            ]
+        return InlineKeyboardMarkup(keyboard)
     """
     Get status of main SELL and BUY ads.
     """
@@ -257,6 +479,12 @@ class TelegramBot:
                     self.worksDictionary[workType]['sellBorder'] = sellBorder
                     self.worksDictionary[workType]['cardMessage'] = cardMsg
                     reply_text = f"Changed status of SELL work to {statusText}!{statusSymbol}"
+                if cardMsg == 'me':
+                    self.worksDictionary[workType]['cardMessage'] = ruslanSberCardMessage
+                elif cardMsg == 'mom':
+                    self.worksDictionary[workType]['cardMessage'] = momSberCardMessage
+                elif cardMsg == 'ayrat':
+                    self.worksDictionary[workType]['cardMessage'] = ayratSberCardMessage
             elif switchStatus is False:
                 if self.worksDictionary[workType]['status'] is False:
                     reply_text = f"SELL work already has status {statusText}!{statusSymbol}"
@@ -361,6 +589,46 @@ class TelegramBot:
         except Exception as exc:
             print(f"Other ERROR occured while sending telegram message!\n", exc)
 
+    def returnRecentAds(self, adsType: str, bankName: str, filtered: bool = True) -> list:
+        if bankName in self.recentAdsDictionary and adsType in self.recentAdsDictionary[bankName]:
+            if time.time() - self.recentAdsDictionary[bankName][adsType]['time'] > 9.9: #Ads are updated every 10 secs
+                newAds, newTime = self.localBitcoinObject.returnAdsWithTime(adsType, bankName)
+                if filtered:
+                    newAds = self.filterAds(adsType=adsType, ads_list=newAds)
+                self.recentAdsDictionary[bankName][adsType]['ads'] = newAds
+                self.recentAdsDictionary[bankName][adsType]['time'] = newTime
+        else:
+            newAds, newTime = self.localBitcoinObject.returnAdsWithTime(adsType, bankName)
+            if filtered:
+                newAds = self.filterAds(adsType=adsType, ads_list=newAds)
+            self.recentAdsDictionary[bankName] = {adsType : {'ads' : newAds, 'time' : newTime}}
+        return self.recentAdsDictionary[bankName][adsType]['ads']
+
+    def filterAds(self, adsType: str, ads_list: list) -> list:
+        filteredAds = []
+        ind = 0
+        if adsType == 'sell':
+            for ad in ads_list:
+                ad = ad['data']
+                if ad['min_amount'] is None:
+                    ads_list[ind]['data']['min_amount'] = '0'
+                if ad['max_amount_available'] is None:
+                    continue
+                if float(ad['max_amount']) > 25000 and float(ad['min_amount']) < 49500:
+                    filteredAds.append(ad)
+                ind += 1
+        elif adsType == 'buy':
+            for ad in ads_list:
+                ad = ad['data']
+                if ad['min_amount'] is None:
+                    ads_list[ind]['data']['min_amount'] = '0'
+                if ad['max_amount_available'] is None:
+                    continue
+                if float(ad['max_amount_available']) > 3997 and float(ad['min_amount']) < 3100:
+                    filteredAds.append(ad)
+                ind += 1
+        return filteredAds
+
     """
     Cosmetic helper function returning status 
     """
@@ -377,6 +645,6 @@ class TelegramBot:
 
 
 if __name__ == '__main__':
-    newBot = TelegramBot(telegramBotToken, telegramChatID, None)
+    newBot = TelegramBot(telegramBotToken, telegramChatID, None )
     newBot.updater.start_polling()
-    newBot.checkWorkSelected()
+    newBot.checkDashboardForNewContacts('mom', True)

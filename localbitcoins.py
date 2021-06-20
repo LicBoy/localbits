@@ -183,12 +183,15 @@ class LocalBitcoin:
 
     """
 
-    def postFeedbackToUser(self, username, feedback, message=None):
+    def postFeedbackToUser(self, username, feedback, msg=None):
+        if feedback not in ['trust', 'positive', 'neutral', 'block', 'block_without_feedback']:
+            raise ValueError(
+                f"Haven't found feedback of type {feedback}! Check feedbacks in API.")
         post = {'feedback': feedback}
-        if message != None:
-            post = {'feedback': feedback, 'msg': message}
+        if msg != None:
+            post = {'feedback': feedback, 'msg': msg}
 
-        return self.sendRequest('/api/feedback/' + username + '/', post, 'post')
+        return self.sendRequest(f'/api/feedback/{username}/', post, 'post')
 
     """
     Gets information about the token owner's wallet balance.
@@ -310,6 +313,17 @@ class LocalBitcoin:
                             'require_trade_volume' : 0.0001}
             return self.sendRequest(f'/api/ad/{adID}/', adNewParams, 'post')
 
+
+    def returnAdsWithTime(self, adsType: str, bankName: str) -> tuple:
+        if adsType not in ['sell', 'buy']:
+            raise ValueError(f"Haven't found ad type with value {adsType}!\nCheck that you return ads correctly!")
+        if bankName not in ['sberbank', 'tinkoff', 'bank-vtb-vtb', 'alfa-bank']:
+            raise ValueError(f"Haven't found bank name with value {adsType}!\nCheck that you return ads correctly!")
+        ads = self.sendRequest(endpoint=f'/{adsType}-bitcoins-online/{bankName}/.json',
+                               params='',
+                               method='get')['ad_list']
+        return (ads, time.time())
+
     """
     Base function of making requests with needed encoded info:
     Apiauth-Key: HMAC authentication key that you got when you created your HMAC authentication from the Apps dashboard.
@@ -340,7 +354,6 @@ class LocalBitcoin:
         if method == 'get':
             response = requests.get(self.baseurl + endpoint, headers=headers, params=params_encoded)
             if response.status_code == 200:
-                #js = json.loads(response.text)
                 js = response.json()
                 if 'data' in js:
                     return js['data']
@@ -352,7 +365,7 @@ class LocalBitcoin:
         elif method == 'post':
             response = requests.post(self.baseurl + endpoint, headers=headers, data=params)
             if response.status_code != 200:
-                js = json.loads(response.text)
+                js = response.json()
             #Different errors need different solutuions
                 print(datetime.now().strftime("%d.%m %H:%M:%S"), endpoint, f"POST ERROR, wating 15sec\n{js}")
                 print(response.status_code, response.text)
