@@ -154,14 +154,15 @@ class LocalBitcoin:
         return self.sendRequest('/api/contact_info/' + contact_id + '/', '', 'get')
 
     """
-    contacts is a comma-separated list of contact IDs that you want to access in bulk.
+    Contacts is a comma-separated list of contact IDs that you want to access in bulk.
     The token owner needs to be either a buyer or seller in the contacts, contacts that do not pass this check are simply not returned.
     A maximum of 50 contacts can be requested at a time.
     The contacts are not returned in any particular order.
     """
 
     def getContactsInfo(self, contacts):
-        return self.sendRequest('/api/contact_info/', {'contacts': contacts}, 'get')
+        contacts = ','.join(contacts)
+        return self.sendRequest('/api/contact_info/', {'contacts': contacts}, 'get')['contact_list']
 
     """
     Returns maximum of 50 newest trade messages.
@@ -179,8 +180,8 @@ class LocalBitcoin:
     """
     Gives feedback to user.
     Possible feedback values are: trust, positive, neutral, block, block_without_feedback as strings.
-    You may also set feedback message field with few exceptions. Feedback block_without_feedback clears the message and with block the message is mandatory.
-
+    You may also set feedback message field with few exceptions.
+    Feedback block_without_feedback clears the message and with block the message is mandatory.
     """
 
     def postFeedbackToUser(self, username, feedback, msg=None):
@@ -241,14 +242,16 @@ class LocalBitcoin:
 
     """
     Expires the current access token immediately.
-    To get a new token afterwards, public apps will need to reauthenticate, confidential apps can turn in a refresh token.
+    To get a new token afterwards, public apps will need to reauthenticate,
+    confidential apps can turn in a refresh token.
     """
 
     def logout(self):
         return self.sendRequest('/api/logout/', '', 'post')
 
     """
-    Lists the token owner's all ads on the data key ad_list, optionally filtered. If there's a lot of ads, the listing will be paginated.
+    Lists the token owner's all ads on the data key ad_list, optionally filtered.
+    If there's a lot of ads, the listing will be paginated.
     Refer to the ad editing pages for the field meanings. List item structure is like so:
     """
 
@@ -266,19 +269,25 @@ class LocalBitcoin:
     Otherwise it functions the same as /api/ad-get/{ad_id}/.
     """
 
-    def getSeveralAds(self, *args):
-        adsArgs = ",".join(args)
+    def getSeveralAds(self, adsList: list):
+        adsArgs = ",".join(adsList)
         return self.sendRequest(endpoint='/api/ad-get/', params={'ads' : adsArgs}, method='get')['ad_list']
 
     """
-    Get info about one AD, specifying or not Fields, which you want to get. If fields parameter is empty, all fields are returned.
+    Get info about one AD, specifying or not Fields, which you want to get.
+    If fields parameter is empty, all fields are returned.
     Use a request parameter of fields, which is a comma-separated list of field names.
     Only those fields will be returned in the data.
     """
 
-    def getAdInfo(self, adID, *args):
-        adFields = ",".join(args)
-        return self.sendRequest(endpoint=f'/api/ad-get/{adID}/', params={'fields' : adFields}, method='get')['ad_list'][0]['data']
+    def getAdInfo(self, adID, adFields: list = None):
+        params = {}
+        if adFields is not None:
+            adFields = ",".join(adFields)
+            params = {'fields' : adFields}
+        return self.sendRequest(endpoint=f'/api/ad-get/{adID}/',
+                                params=params,
+                                method='get')['ad_list'][0]['data']
 
     """
     Get info about several ads, which are contained in first List argument with specifying fields parameter.
@@ -295,7 +304,8 @@ class LocalBitcoin:
     """
 
     def switchAd(self, adID, status : bool):
-        adInfo = self.getAdInfo(adID, 'trade_type', 'visible', 'price_equation', 'lat', 'lon', 'countrycode', 'max_amount', 'msg', 'track_max_amount')
+        adInfo = self.getAdInfo(adID, ['trade_type', 'visible', 'price_equation', 'lat', 'lon', 'countrycode',
+                                'max_amount', 'msg', 'track_max_amount'])
         trackMaxAmount = False
         if adInfo['trade_type'] == 'ONLINE_BUY':
             trackMaxAmount = True
@@ -310,9 +320,27 @@ class LocalBitcoin:
                             'max_amount': int(float(adInfo['max_amount'])),
                             'msg': adInfo['msg'],
                             'track_max_amount': trackMaxAmount,
-                            'require_trade_volume' : 0.0001}
+                            'require_trade_volume' : 0.0} #Field against scammers
             return self.sendRequest(f'/api/ad/{adID}/', adNewParams, 'post')
 
+    def changeAdField(self, ad_ID: str, **fieldsDict):
+        adInfo = self.getAdInfo(ad_ID, ['trade_type', 'visible', 'price_equation', 'lat', 'lon', 'countrycode',
+                                       'max_amount', 'msg', 'track_max_amount'])
+        trackMaxAmount = False
+        if adInfo['trade_type'] == 'ONLINE_BUY':
+            trackMaxAmount = True
+        adNewParams = {'visible': adInfo['visible'],
+                       'price_equation': adInfo['price_equation'],
+                       'lat': adInfo['lat'],
+                       'lon': adInfo['lon'],
+                       'countrycode': adInfo['countrycode'],
+                       'max_amount': int(float(adInfo['max_amount'])),
+                       'msg': adInfo['msg'],
+                       'track_max_amount': trackMaxAmount,
+                       'require_trade_volume': 0.0}  # Field against scammers
+        for key, value in fieldsDict.items():
+            adNewParams[key] = value
+        return self.sendRequest(f'/api/ad/{ad_ID}/', adNewParams, 'post')
 
     def returnAdsWithTime(self, adsType: str, bankName: str) -> tuple:
         if adsType not in ['sell', 'buy']:
@@ -332,7 +360,7 @@ class LocalBitcoin:
     """
 
     def sendRequest(self, endpoint, params, method):    #Base function
-        time.sleep(5)
+        time.sleep(3)
         params_encoded = ''
         if params != '':
             params_encoded = urllib.parse.urlencode(params)

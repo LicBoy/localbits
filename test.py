@@ -53,14 +53,16 @@ class LocalBitcoinBot:
         return (reSearchSber and not reSearchVtb and not reSearchAlpha and not reSearchRoket and not reSearchTink and not reSearchRaif)
 
     #Get ads from online_buy category, U BUY HERE
-    def getListOfBuyAds(self) -> list: #returns list of dictionaried ads
+    def getListOfBuyAds(self, amount: int = 5) -> list: #returns list of dictionaried ads
         ads = self.telegramBotObject.returnRecentAds(adsType='sell', bankName='sberbank')
-        for ad in ads[0:7]:
+        if len(ads) < amount:
+            amount = len(ads)
+        for ad in ads[0:amount]:
             logger.debug(f"BUY AD: {ad['temp_price']} RUB | {ad['min_amount']} - {ad['max_amount_available']} | {ad['profile']['username']}")
-        return ads
+        return ads[0:amount]
 
     #Get ads from online_sell category, U SELL HERE
-    def getListOfSellAds(self, adsAmount = 7) -> list: #returns list of dictionaried ads
+    def getListOfSellAds(self, adsAmount: int = 7) -> list: #returns list of dictionaried ads
         ads = self.telegramBotObject.returnRecentAds(adsType='buy', bankName='sberbank')
         if len(ads) < adsAmount:
             adsAmount = len(ads)
@@ -83,7 +85,6 @@ class LocalBitcoinBot:
         resPrice = medPrice + disp - spreadDif
         if sellAdsPrices[0] - resPrice < minDif:
             resPrice = sellAdsPrices[0] - minDif
-
         for ad in buyAds:
             if float(ad['temp_price']) < resPrice and ad['profile']['username'] != myUserName:
                 resPrice = float(ad['temp_price']) + 2
@@ -110,16 +111,13 @@ class LocalBitcoinBot:
         logger.addHandler(fh)
         return logger
 
-    #NEW
     def buying(self, spreadDif):
-        sell_Ads = self.getListOfSellAds(adsAmount=5)
-        buy_Ads = self.getListOfBuyAds()
-        resPrice = self.countGoodPriceForBUY(sell_Ads, buy_Ads, spreadDif=spreadDif, minDif=50000)
+        sell_Ads = self.getListOfSellAds(adsAmount=3)
+        buy_Ads = self.getListOfBuyAds(amount=5)
+        resPrice = self.countGoodPriceForBUY(sell_Ads, buy_Ads, spreadDif=spreadDif, minDif=40000)
         print(f"{datetime.datetime.now().strftime('%d.%m %H:%M:%S')} NEW BUY price is {resPrice}!")
         self.localBitcoinObject.sendRequest(f'/api/ad-equation/{online_buy}/', params={'price_equation': str(resPrice)
                                                                                        }, method='post')
-
-    #Developing
     def selling(self, border):
         ads = self.telegramBotObject.returnRecentAds(adsType='buy', bankName='sberbank')
         myPrice = 0
@@ -137,7 +135,7 @@ class LocalBitcoinBot:
             if username == myUserName:
                 myPrice = temp_price
                 continue
-            elif min_amount <= 3100 and max_amount >= 4001 and username not in invisibleList and temp_price > border:
+            elif min_amount <= 3550 and max_amount >= 4875 and username not in invisibleList and temp_price > border:
                 if myPrice < temp_price and temp_price - myPrice == 2:
                     break
                 logger.debug(f"{username} - {temp_price}")
@@ -148,7 +146,7 @@ class LocalBitcoinBot:
                 break
 
     def scanning(self):
-        buyAds = self.getListOfBuyAds()[0:5]
+        buyAds = self.getListOfBuyAds(5)
         sellAds = self.getListOfSellAds(3)
         buyAdsPrices = [float(x['temp_price']) for x in buyAds]
         sellAdsPrices = [float(x['temp_price']) for x in sellAds]
@@ -161,49 +159,11 @@ class LocalBitcoinBot:
                 winsound.MessageBeep()
             print(f'{datetime.datetime.now().strftime("%d.%m %H:%M:%S")} Scanning localbitcoins: ... {curDifference}')
 
-    def chooseWorkType(self):   #User input function to define type of work
-        pass
 
-"""main"""
 if __name__ == "__main__":
     localbitcoinsBot = LocalBitcoinBot(LocalBitcoin(key, secret), TelegramBot(tokens.telegramBotToken, tokens.telegramChatID, LocalBitcoin(key, secret)))
-    spreadNeeded = False
-    sellBorderNeeded = False
-    cardMessageNeeded = False
-    #Get worktype
-    while True:
-        workType = input("ENTER WORKTYPE ( " + " / ".join(localbitcoinsBot.workTypes) + " ): ".lower())
-        if workType == 'idle':
-            break
-        elif workType in localbitcoinsBot.telegramBotObject.worksDictionary.keys():
-            localbitcoinsBot.telegramBotObject.worksDictionary[workType]['status'] = True
-            spreadNeeded = workType == 'all' or workType == 'buy'
-            sellBorderNeeded = workType == 'all' or workType == 'sell'
-            cardMessageNeeded = workType == 'all' or workType == 'sell' or workType == 'contacts'
-            break
-    if not workType == 'idle':
-        #Card choose
-        if cardMessageNeeded:
-            #Card on which noney will come
-            while True:
-                cardHolder = input("ENTER CARD on which money will come ( " + " / ".join(localbitcoinsBot.cardHolders)  + " ): ").lower()
-                if cardHolder in localbitcoinsBot.cardHolders:
-                    if cardHolder == 'me':
-                        localbitcoinsBot.telegramBotObject.worksDictionary['sell']['cardMessage'] = ruslanSberCardMessage
-                    elif cardHolder == 'ayrat':
-                        localbitcoinsBot.telegramBotObject.worksDictionary['sell']['cardMessage'] = ayratSberCardMessage
-                    elif cardHolder == 'mom':
-                        localbitcoinsBot.telegramBotObject.worksDictionary['sell']['cardMessage'] = momSberCardMessage
-                    break
-        #BUY spread
-        if spreadNeeded:
-            curSpread = int(input("ENTER SPREAD DIFFERENCE: "))
-            localbitcoinsBot.telegramBotObject.worksDictionary['buy']['buyDifference'] = curSpread
-        #SELL border
-        if sellBorderNeeded:
-            sellBorder = int(input("ENTER SELL BORDER: "))
-            localbitcoinsBot.telegramBotObject.worksDictionary['sell']['sellBorder'] = sellBorder
     logger = localbitcoinsBot.get_logger()
+    localbitcoinsBot.telegramBotObject.worksDictionary['scanning']['status'] = True
     while True:
         try:
             localbitcoinsBot.telegramBotObject.updater.start_polling()
@@ -220,9 +180,13 @@ if __name__ == "__main__":
                             localbitcoinsBot.buying(localbitcoinsBot.telegramBotObject.worksDictionary['buy']['buyDifference'])
                         elif workKey == 'scanning':
                             localbitcoinsBot.scanning()
+        except json.decoder.JSONDecodeError as jsonError:
+            print(
+                f"JSON decode error happened {datetime.datetime.now().strftime('%d.%m %H:%M:%S')}, retrying in 10 sec...\n", jsonError)
+            time.sleep(10)
         except Exception as exc:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             localbitcoinsBot.telegramBotObject.sendBotErrorMessage(f"LocalBot Error happened at  {datetime.datetime.now().strftime('%d.%m %H:%M:%S')}  restarting after 5 sec...")
             print(f"Some shit happened at  {datetime.datetime.now().strftime('%d.%m %H:%M:%S')}  restarting after 5 sec...\n", exc)
-            traceback.print_exception(exc_type, exc_value, exc_traceback, limit=2, file=sys.stdout)
+            traceback.print_exception(exc_type, exc_value, exc_traceback, file=sys.stdout)
             time.sleep(5)

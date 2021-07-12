@@ -5,9 +5,10 @@ import time, datetime
 lclbit = LocalBitcoin(key, secret)
 
 if __name__ == '__main__':
+    keyName = 'min_amount'
+    lclbit.changeAdField('1257933', keyName = '18000')
     while True:
         try:
-            print(lclbit.getContactsInfo('72784802'))
             contactsToRelease = set(input("Input contacts to release:\n").split())
             for contact in contactsToRelease:
                 st_code = lclbit.contactRelease(contact)[0]
