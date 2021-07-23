@@ -386,10 +386,16 @@ class LocalBitcoin:
                 if 'data' in js:
                     return js['data']
             else:
-                js = json.loads(response.text)
-                print(datetime.now().strftime("%d.%m %H:%M:%S"), endpoint, "GET ERROR, waiting 5sec...", '\n', response.text, "\n", js)
-                time.sleep(5)
-                return self.sendRequest(endpoint, params, 'get')
+                js = response.json()
+                if js['error']['error_code'] == 42: #IF nonce is small
+                    print("Nonce is small, retrying request...")
+                    return self.sendRequest(endpoint, params, 'get')
+                    #If nonce is small, try sending requests until it's done
+                else:
+                    js = json.loads(response.text)
+                    print(datetime.now().strftime("%d.%m %H:%M:%S"), endpoint, "other GET ERROR, waiting 5sec...", '\n', response.text, "\n", js)
+                    time.sleep(5)
+                    return self.sendRequest(endpoint, params, 'get')
         elif method == 'post':
             response = requests.post(self.baseurl + endpoint, headers=headers, data=params)
             if response.status_code != 200:

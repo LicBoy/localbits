@@ -12,7 +12,7 @@ import re, time
 from typing import Union
 
 class TelegramBot:
-    MENU_CHOOSING_OPTION, CHANGING_ADS, CHOOSING_WORKS, CHANGING_WORK = range(4)
+    MENU_CHOOSING_OPTION, CHANGING_ADS, CHANGING_WORKS = range(3)
 
     """
     On object initialization pass telegram TOKEN and ChatID
@@ -26,9 +26,9 @@ class TelegramBot:
 
         #This info strongly connected with bot's implementation
         self.worksDictionary = {
-            'sell' : {'status' : False, 'sellBorder' : None, 'cardMessage' : None},
+            'sell' : {'status' : False, 'sellBorder' : None, 'cardOwner' : {'name' : None, 'cardMessage' : None}},
             'buy' : {'status' : False, 'buyDifference' : None},
-            'scanning' : {'status' : False}
+            'scan' : {'status' : False}
         }
         """
         Dictionary with contacts' info
@@ -67,27 +67,34 @@ class TelegramBot:
         self.dispatcher.add_handler(CallbackQueryHandler(self.send_message_callback, pattern='^message_\S+$'))
 
         self.menuHandler = ConversationHandler(
-            entry_points=[CommandHandler('menu', self.command_menu),
-                          CallbackQueryHandler(self.command_menu_from_contact, pattern='^' + 'callback_menu_from_contact' + '$')],
-            states={
-            self.MENU_CHOOSING_OPTION: [
-                CallbackQueryHandler(self.command_menu_ads, pattern='^' + 'callback_ads' + '$'),
-                CallbackQueryHandler(self.command_menu_works, pattern='^' + 'callback_works' + '$'),
-                CallbackQueryHandler(self.command_menu_balance, pattern='^' + 'callback_balance' + '$'),
-                CallbackQueryHandler(self.command_menu_later, pattern='^' + 'callback_menu' + '$'),
+            entry_points=[
+                CommandHandler('menu', self.command_menu),
+                CallbackQueryHandler(self.command_menu_from_contact, pattern='^callback_menu_from_contact$')
             ],
-            self.CHANGING_ADS: [
-                CallbackQueryHandler(self.ads_switch, pattern='^' + 'callback_ad_switch_\d_\d+_\d+' + '$'),
-                CallbackQueryHandler(self.change_limit_callback, pattern=f'^callback_ad_changeLimit_((max)|(min))?_\d+_\d+$'),
-                CallbackQueryHandler(self.command_menu_later, pattern='^' + 'callback_menu' + '$')
-            ]
+            states={
+                self.MENU_CHOOSING_OPTION: [
+                    CallbackQueryHandler(self.command_menu_ads, pattern='^' + 'callback_ads' + '$'),
+                    CallbackQueryHandler(self.command_menu_works, pattern='^' + 'callback_works' + '$'),
+                    CallbackQueryHandler(self.command_menu_balance, pattern='^' + 'callback_balance' + '$'),
+                    CallbackQueryHandler(self.command_menu_later, pattern='^' + 'callback_menu' + '$'),
+                ],
+                self.CHANGING_ADS: [
+                    CallbackQueryHandler(self.ads_switch, pattern='^callback_ad_switch_\d_\d+_\d+$'),
+                    CallbackQueryHandler(self.change_limit_callback, pattern=f'^callback_ad_changeLimit_((max)|(min))?_\d+_\d+$'),
+                    CallbackQueryHandler(self.command_menu_later, pattern='^callback_menu$')
+                ],
+                self.CHANGING_WORKS: [
+                    CallbackQueryHandler(self.command_menu_works, pattern='(^callback_menu_works$)|(^callback_back$)'),
+                    CallbackQueryHandler(self.work_sell_options, pattern='^callback_works_sell$'),
+                    CallbackQueryHandler(self.work_buy_options, pattern='^callback_works_buy$'),
+                    CallbackQueryHandler(self.work_scan_options, pattern='^callback_works_scan$'),
+                    CallbackQueryHandler(self.command_menu_later, pattern='^callback_menu$')
+                ]
         },
             fallbacks=[
             CommandHandler('menu', self.command_menu),
             CallbackQueryHandler(self.command_menu_later, pattern='^' + 'callback_menu' + '$')
-        ],
-            conversation_timeout=300,
-        )
+        ])
         self.dispatcher.add_handler(self.menuHandler)
         self.testDict = {
             '777' : {
@@ -99,7 +106,6 @@ class TelegramBot:
                         'tobe_deleted' : False
             }
         }
-
     """
     Function which compares dashboard on lclbitcoins and contacts dictionary and 
     makes needed changes for contacts.
@@ -357,7 +363,7 @@ class TelegramBot:
                     InlineKeyboardButton("Message 💬", callback_data=f"message_{contact_ID}_{username}"),
                 ],
                 [
-                    InlineKeyboardButton("Menu ⚙", callback_data='^' + 'callback_menu_from_contact' + '$')
+                    InlineKeyboardButton("Menu ⚙", callback_data='callback_menu_from_contact')
                 ]
             ]
         return InlineKeyboardMarkup(keyboard)
@@ -387,6 +393,7 @@ class TelegramBot:
 
     def command_menu_from_contact(self, update: Update, context: CallbackContext) -> int:
         query = update.callback_query
+        query.answer()
         keyboard = [
             [InlineKeyboardButton('Ads', callback_data='callback_ads'),
              InlineKeyboardButton('Works', callback_data='callback_works'),
@@ -396,7 +403,6 @@ class TelegramBot:
         self.sendMessageWithConnectionCheck(chat_id=update.effective_chat.id,
                                             text='Menu',
                                             reply_markup=replyMarkup)
-        query.answer()
         return TelegramBot.MENU_CHOOSING_OPTION
 
     def command_menu_ads(self, update: Update, context: CallbackContext) -> int:
@@ -463,9 +469,10 @@ class TelegramBot:
         else: replyText = 'Sell'
         ad_newStatus = bool(int(query.data.split("_")[3]))
         index = int(query.data.split("_")[5])
-        prevText = '\n'.join(query.message.text.split('\n')[-3:])
         prevMarkup = query.message.reply_markup
-        query.edit_message_text('🕒...Switching ad...\n\n' + prevText, reply_markup=prevMarkup)
+        prevText = '\n'.join(query.message.text.split('\n')[-3:])
+        query.edit_message_text('🕒...Switching ad...\n',
+                                reply_markup=prevMarkup)
 
         if self.localBitcoinObject.switchAd(adID=ad_ID, status=ad_newStatus)[0] == 200:
             replyText += f' ad is now {self.returnStatusTextAndSymbol(ad_newStatus)[0]} {self.returnStatusTextAndSymbol(ad_newStatus)[1]}'
@@ -535,32 +542,89 @@ class TelegramBot:
                                 reply_markup=newMarkup)
         return TelegramBot.CHANGING_ADS
 
-    def command_menu_ad_options(update: Update, context: CallbackContext) -> int:
+    def command_menu_works(self, update: Update, context: CallbackContext) -> int:
         query = update.callback_query
         query.answer()
-        currentAd = query.data.split("_")[2]
         keyboard = [
-            [InlineKeyboardButton('Switch Ad', callback_data='callback_NULL'),
-             InlineKeyboardButton('Limits', callback_data='callback_NULL'),
-             InlineKeyboardButton('Price', callback_data='callback_NULL')],
-            [InlineKeyboardButton('Back', callback_data='callback_NULL')]
+            [InlineKeyboardButton(f'Selling {self.returnStatusTextAndSymbol(self.worksDictionary["sell"]["status"])[1]}',
+                                  callback_data='callback_works_sell'),
+             InlineKeyboardButton(f'Buying {self.returnStatusTextAndSymbol(self.worksDictionary["buy"]["status"])[1]}',
+                                  callback_data='callback_works_buy'),
+             InlineKeyboardButton(f'Scanning {self.returnStatusTextAndSymbol(self.worksDictionary["buy"]["status"])[1]}',
+                                  callback_data='callback_works_scan')],
+            [InlineKeyboardButton('Menu',
+                                  callback_data='callback_menu_later')]
         ]
         replyMarkup = InlineKeyboardMarkup(keyboard)
-        query.edit_message_text('Chose', reply_markup=replyMarkup)
-        return TelegramBot.CHANGING_ADS
+        query.edit_message_text('Available works' + '\n'.join(query.message.text.split('\n')[-3:]),
+                                reply_markup=replyMarkup)
+        return TelegramBot.CHANGING_WORKS
 
-    def command_menu_works(update: Update, context: CallbackContext) -> int:
+    def work_sell_options(self, update: Update, context: CallbackContext):
+        query = update.callback_query
+        markup = self.works_build_markup('sell')
+        query.answer()
+        query.edit_message_text(text=f'Sell work control', reply_markup=markup)
+        return TelegramBot.CHANGING_WORKS
+
+    def change_work_number_key(self, update: Update, context: CallbackContext):
+        pass
+
+    def work_buy_options(self, update: Update, context: CallbackContext):
         query = update.callback_query
         query.answer()
+
+    def works_build_markup(self, workType: str) -> InlineKeyboardMarkup:
+        statusText, statusIcon = self.returnStatusTextAndSymbol(not self.worksDictionary[workType]['status'])
         keyboard = [
-            [InlineKeyboardButton('Work 1', callback_data='callback_NULL'),
-             InlineKeyboardButton('Work 2', callback_data='callback_NULL'),
-             InlineKeyboardButton('Work 3', callback_data='callback_NULL')],
-            [InlineKeyboardButton('Menu', callback_data='callback_menu')]
+            [InlineKeyboardButton(f'Turn {statusText} {statusIcon}', callback_data=f'callback_works_switch_{workType}')],
         ]
-        replyMarkup = InlineKeyboardMarkup(keyboard)
-        query.edit_message_text('Choose work:', reply_markup=replyMarkup)
-        return TelegramBot.CHOOSING_WORKS
+        if workType in ['buy', 'sell']:
+            #keyboard += self.works_build_numberArg_Part(workType)
+            if workType == 'sell':
+                buttonsList = []
+                cardPart = [[InlineKeyboardButton(f'Cards')]]
+                for name in ['Ruslan', 'Mom', 'Ayrat']:
+                    curButton = InlineKeyboardButton(f'{name} {self.returnStatusTextAndSymbol(self.worksDictionary["sell"]["cardOwner"]["name"] == name)[1]}',
+                                          callback_data=f'callback_sell_card_{name}')
+                    buttonsList.append(curButton)
+                #cardPart[0].append(buttonsList)
+                #keyboard += cardPart
+        #keyboard += [[InlineKeyboardButton('Back', callback_data='callback_works')]]
+        return InlineKeyboardMarkup(keyboard)
+
+    def works_build_numberArg_Part(self, workType: str, minNumThousands: int = 2, maxNumThousands: int = 10) -> list:
+        if workType not in ['sell', 'buy']:
+            raise ValueError(f"Haven't found worktype type with value {workType}!\nCheck that you gave valid argument!")
+        dictKey = ''
+        buttonText = ''
+        if workType == 'sell':
+            dictKey = 'sellBorder'
+            buttonText = 'Sell Border'
+        else:
+            dictKey = 'buyDifference'
+            buttonText = 'Buy Difference'
+        raw = [
+            [buttonText],
+            [
+                InlineKeyboardButton(f'-{minNumThousands}k',
+                                     callback_data=f'callback_work_{workType}_changeNumArg_-{minNumThousands}'),
+                InlineKeyboardButton(f'-{maxNumThousands}k',
+                                     callback_data=f'callback_work_{workType}_changeNumArg_-{maxNumThousands}'),
+                InlineKeyboardButton(f'{self.worksDictionary[workType][dictKey]}',
+                                     callback_data=f'callback_work_{workType}_changeNumArg_manual'),
+                InlineKeyboardButton(f'+{minNumThousands}k',
+                                     callback_data=f'callback_work_{workType}_changeNumArg_+{minNumThousands}'),
+                InlineKeyboardButton(f'+{maxNumThousands}k',
+                                     callback_data=f'callback_work_{workType}_changeNumArg_+{maxNumThousands}'),
+            ]
+        ]
+        return raw
+
+    def work_scan_options(self, update: Update, context: CallbackContext):
+        query = update.callback_query
+        query.answer()
+
 
     def command_menu_balance(update: Update, context: CallbackContext) -> int:
         query = update.callback_query
@@ -588,7 +652,7 @@ class TelegramBot:
             if ad['trade_type'] == 'ONLINE_SELL':
                 text += '<b>Selling</b>'
                 argumentsInfo = f"Sell Border: {self.worksDictionary['sell']['sellBorder']}\n" \
-                                 f"Active Card: {self.worksDictionary['sell']['cardMessage']}"
+                                 f"Active Card: {self.worksDictionary['sell']['cardOwner']['cardMessage']}"
             else:
                 text += '<b>Buying</b>'
                 argumentsInfo = f"Buy Difference: {self.worksDictionary['buy']['buyDifference']}"
@@ -703,8 +767,8 @@ class TelegramBot:
                 else:
                     reply_text = f"With BUY WORK other ERROR occured:\n" + requestCodeAndText[1]
 
-            elif workType == 'scanning':
-                self.worksDictionary['scanning']['status'] = switchStatus
+            elif workType == 'scan':
+                self.worksDictionary['scan']['status'] = switchStatus
                 reply_text =  f"SCANNING WORK was turned {statusText}!{statusSymb}"
         return reply_text
 
@@ -716,23 +780,26 @@ class TelegramBot:
         else:
             statusText, statusSymbol = self.returnStatusTextAndSymbol(switchStatus)
             if switchStatus is True:
-                if self.worksDictionary[workType]['status'] is False and self.worksDictionary[workType]['sellBorder'] is None and self.worksDictionary[workType]['cardMessage'] is None and (sellBorder is None or cardMsg is None):
+                if self.worksDictionary[workType]['status'] is False and self.worksDictionary[workType]['sellBorder'] is None and self.worksDictionary[workType]['cardOwner']['cardMessage'] is None and (sellBorder is None or cardMsg is None):
                     reply_text = f"Haven't found some of arguments(cardMsg/sellborder) for first launch of SELL work!❌"
                 elif self.worksDictionary[workType]['status'] is True:
                     self.worksDictionary[workType]['sellBorder'] = sellBorder
-                    self.worksDictionary[workType]['cardMessage'] = cardMsg
+                    self.worksDictionary[workType]['cardOwner']['cardMessage'] = cardMsg
                     reply_text = f"Changed arguments of work, but SELL work already has status {statusText}!{statusSymbol}"
                 elif self.worksDictionary[workType]['status'] is False:
                     self.worksDictionary[workType]['status'] = switchStatus
                     self.worksDictionary[workType]['sellBorder'] = sellBorder
-                    self.worksDictionary[workType]['cardMessage'] = cardMsg
+                    self.worksDictionary[workType]['cardOwner']['cardMessage'] = cardMsg
                     reply_text = f"Changed status of SELL work to {statusText}!{statusSymbol}"
                 if cardMsg == 'me':
-                    self.worksDictionary[workType]['cardMessage'] = ruslanSberCardMessage
+                    self.worksDictionary[workType]['cardOwner']['name'] = 'Ruslan'
+                    self.worksDictionary[workType]['cardOwner']['cardMessage'] = ruslanSberCardMessage
                 elif cardMsg == 'mom':
-                    self.worksDictionary[workType]['cardMessage'] = momSberCardMessage
+                    self.worksDictionary[workType]['cardOwner']['name'] = 'Mom'
+                    self.worksDictionary[workType]['cardOwner']['cardMessage'] = momSberCardMessage
                 elif cardMsg == 'ayrat':
-                    self.worksDictionary[workType]['cardMessage'] = ayratSberCardMessage
+                    self.worksDictionary[workType]['cardOwner']['name'] = 'Ayrat'
+                    self.worksDictionary[workType]['cardOwner']['cardMessage'] = ayratSberCardMessage
             elif switchStatus is False:
                 if self.worksDictionary[workType]['status'] is False:
                     reply_text = f"SELL work already has status {statusText}!{statusSymbol}"
@@ -781,7 +848,7 @@ class TelegramBot:
 
     """
     TODO: Change ads' prices or price changing algorithm.
-    Probably useless.Ad
+    Probably useless.
     """
     def changeAdPrice(self, update, context):
         userArgs = " ".join(context.args)

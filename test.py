@@ -13,10 +13,6 @@ secret = tokens.secret
 online_buy = tokens.online_buy          #YOU BUY HERE
 online_sell = tokens.online_sell        #YOU SELL HERE
 myUserName = tokens.myUserName
-ruslanSberCardMessage = tokens.ruslanSberCardMessage
-ayratSberCardMessage = tokens.ayratSberCardMessage
-momSberCardMessage = tokens.momSberCardMessage
-almirSberCardMessage = tokens.almirSberCardMessage
 askForFIOMessage = 'фио?'
 
 #IGNORE this users
@@ -32,8 +28,6 @@ class LocalBitcoinBot:
     def __init__(self, localBitcoinObject : LocalBitcoin, telegramBotObject : TelegramBot):
         self.localBitcoinObject = localBitcoinObject
         self.telegramBotObject = telegramBotObject
-        self.cardHolders = ['me', 'mom', 'almir', 'ayrat']
-        self.workTypes = ['all', 'sell', 'buy', 'contacts', 'scanning']
 
     def checkForBankNamesRegularExpression(self, bank_name):
         # Regular expressions for Banks: Sber, Tink, Alpha, VTB, Roket, Raif
@@ -163,22 +157,23 @@ class LocalBitcoinBot:
 if __name__ == "__main__":
     localbitcoinsBot = LocalBitcoinBot(LocalBitcoin(key, secret), TelegramBot(tokens.telegramBotToken, tokens.telegramChatID, LocalBitcoin(key, secret)))
     logger = localbitcoinsBot.get_logger()
-    localbitcoinsBot.telegramBotObject.worksDictionary['scanning']['status'] = True
+    with open('logs.log', 'w'):
+        pass  # Clearing log file
+    localbitcoinsBot.telegramBotObject.worksDictionary['scan']['status'] = True
     while True:
         try:
             localbitcoinsBot.telegramBotObject.updater.start_polling()
-            with open('logs.log', 'w'): pass #Clearing log file
             localbitcoinsBot.telegramBotObject.checkDashboardForNewContacts(
-                localbitcoinsBot.telegramBotObject.worksDictionary['sell']['cardMessage'], start=True)
+                localbitcoinsBot.telegramBotObject.worksDictionary['sell']['cardOwner']['cardMessage'], start=True)
             while True:
                 for workKey in localbitcoinsBot.telegramBotObject.worksDictionary.keys():
                     if localbitcoinsBot.telegramBotObject.worksDictionary[workKey]['status'] == True:
                         if workKey == 'sell':
                             localbitcoinsBot.selling(localbitcoinsBot.telegramBotObject.worksDictionary['sell']['sellBorder'])
-                            localbitcoinsBot.telegramBotObject.checkDashboardForNewContacts(localbitcoinsBot.telegramBotObject.worksDictionary['sell']['cardMessage'])
+                            localbitcoinsBot.telegramBotObject.checkDashboardForNewContacts(localbitcoinsBot.telegramBotObject.worksDictionary['sell']['cardOwner']['cardMessage'])
                         elif workKey == 'buy':
                             localbitcoinsBot.buying(localbitcoinsBot.telegramBotObject.worksDictionary['buy']['buyDifference'])
-                        elif workKey == 'scanning':
+                        elif workKey == 'scan':
                             localbitcoinsBot.scanning()
         except json.decoder.JSONDecodeError as jsonError:
             print(
