@@ -30,6 +30,7 @@ class TelegramBot:
             'buy' : {'status' : False, 'buyDifference' : None},
             'scan' : {'status' : False}
         }
+        self.CARDNAMES = ['Ruslan', 'Mom', 'Ayrat']
         """
         Dictionary with contacts' info
         """
@@ -56,12 +57,18 @@ class TelegramBot:
         self.dispatcher.add_handler(CommandHandler('switchwork', self.switchWork))
         self.dispatcher.add_handler(CommandHandler('changeborder', self.changeBorder))
 
+        #Handler to catch message for feedback
         self.feedbackMessageHandler = MessageHandler(filters = Filters.text & ~Filters.command,
                                                      callback=self.get_reputation_message_callback)
+        #Handler to catch message which will be sent to user
         self.sendMessageHandler = MessageHandler(filters=(Filters.text | Filters.document.category('image')) & ~Filters.command,
                                                  callback=self.get_message_send_message_callback)
+        #Handler to catch message of digits to change ad limits.
         self.getNewLimitHandler = MessageHandler(filters=Filters.regex('^\d*[.,]?\d*$') | Filters.regex('^Отмена$'),
                                                  callback=self.get_new_limit_message_callback)
+        #Handler to catch message of digits to input new work argument
+        self.getNewWorkArgumentHandler = MessageHandler(filters=Filters.regex('^\d*[.,]?\d*$') | Filters.regex('^Отмена$'),
+                                                 callback=self.get_work_numberArg_manually_message)
         self.dispatcher.add_handler(CallbackQueryHandler(self.getReleaseCallback, pattern='^release_\S+$'))
         self.dispatcher.add_handler(CallbackQueryHandler(self.change_reputation_callback, pattern='^reputation_'))
         self.dispatcher.add_handler(CallbackQueryHandler(self.send_message_callback, pattern='^message_\S+$'))
@@ -73,10 +80,10 @@ class TelegramBot:
             ],
             states={
                 self.MENU_CHOOSING_OPTION: [
-                    CallbackQueryHandler(self.command_menu_ads, pattern='^' + 'callback_ads' + '$'),
-                    CallbackQueryHandler(self.command_menu_works, pattern='^' + 'callback_works' + '$'),
-                    CallbackQueryHandler(self.command_menu_balance, pattern='^' + 'callback_balance' + '$'),
-                    CallbackQueryHandler(self.command_menu_later, pattern='^' + 'callback_menu' + '$'),
+                    CallbackQueryHandler(self.command_menu_ads, pattern='^callback_ads$'),
+                    CallbackQueryHandler(self.command_menu_works, pattern='^callback_works$'),
+                    CallbackQueryHandler(self.command_menu_balance, pattern='^callback_wallet$'),
+                    CallbackQueryHandler(self.command_menu_later, pattern='^callback_menu$'),
                 ],
                 self.CHANGING_ADS: [
                     CallbackQueryHandler(self.ads_switch, pattern='^callback_ad_switch_\d_\d+_\d+$'),
@@ -90,9 +97,12 @@ class TelegramBot:
                     CallbackQueryHandler(self.work_scan_options, pattern='^callback_works_scan$'),
                     CallbackQueryHandler(self.command_menu_later, pattern='^callback_menu$'),
                     CallbackQueryHandler(self.work_switch, pattern='^callback_works_switch_\w*$'),
-                    CallbackQueryHandler(self.change_work_numberArg_fromButton, pattern='^callback_work_\w+_\w+_\S+$'),
+                    CallbackQueryHandler(self.change_work_numberArg_fromButton, pattern='^callback_work_\w+_\w+_[+-]\d+$'),
+                    CallbackQueryHandler(self.change_work_numberArg_manually, pattern='^callback_work_\w+_\w+_manual$'),
+                    CallbackQueryHandler(self.change_work_activeCard, pattern='^callback_sell_card_\w+$'),
 
-                    CallbackQueryHandler(self.command_menu_works, pattern='^callback_works$')
+                    CallbackQueryHandler(self.command_menu_works, pattern='^callback_works$'),
+                    CallbackQueryHandler(self.command_menu_later, pattern='^callback_menu_later$')
                 ]
         },
             fallbacks=[
@@ -265,7 +275,7 @@ class TelegramBot:
         else:
             contact_ID = self.lastCallbackQuery.split("_")[1]
             username = self.lastCallbackQuery.split("_", 2)[2]
-            replyMsg = 'Sending message...🕒'
+            replyMsg = '🕒 Sending message...'
             msg_ID = self.sendMessageWithConnectionCheck(chat_id=update.effective_chat.id,
                                                 text=replyMsg).message_id
             if self.localBitcoinObject.postMessageToContact(contact_id=contact_ID, message=messageText)[0] == 200:
@@ -372,6 +382,9 @@ class TelegramBot:
             ]
         return InlineKeyboardMarkup(keyboard)
 
+    """
+    Callback to start conversation and send menu.
+    """
     def command_menu(self, update: Update, context: CallbackContext) -> int:
         keyboard = [
             [InlineKeyboardButton('Ads', callback_data='callback_ads'),
@@ -380,10 +393,13 @@ class TelegramBot:
         ]
         replyMarkup = InlineKeyboardMarkup(keyboard)
         self.sendMessageWithConnectionCheck(chat_id=update.effective_chat.id,
-                                            text='Menu',
+                                            text='Menu ⚙',
                                             reply_markup=replyMarkup)
         return TelegramBot.MENU_CHOOSING_OPTION
 
+    """
+    Callback to return to menu later in conversation.
+    """
     def command_menu_later(self, update: Update, context: CallbackContext) -> int:
         keyboard = [
             [InlineKeyboardButton('Ads', callback_data='callback_ads'),
@@ -392,9 +408,12 @@ class TelegramBot:
         ]
         replyMarkup = InlineKeyboardMarkup(keyboard)
         query = update.callback_query
-        query.edit_message_text('Menu', reply_markup=replyMarkup)
+        query.edit_message_text('Menu ⚙', reply_markup=replyMarkup)
         return TelegramBot.MENU_CHOOSING_OPTION
 
+    """
+    Callback to start menu convesation from inline button.
+    """
     def command_menu_from_contact(self, update: Update, context: CallbackContext) -> int:
         query = update.callback_query
         query.answer()
@@ -405,14 +424,16 @@ class TelegramBot:
         ]
         replyMarkup = InlineKeyboardMarkup(keyboard)
         self.sendMessageWithConnectionCheck(chat_id=update.effective_chat.id,
-                                            text='Menu',
+                                            text='Menu ⚙',
                                             reply_markup=replyMarkup)
         return TelegramBot.MENU_CHOOSING_OPTION
 
+    """
+    Function to get ads info from lcl and send panel with ads' options.
+    """
     def command_menu_ads(self, update: Update, context: CallbackContext) -> int:
         query = update.callback_query
         query.answer()
-
         query.edit_message_text('🕒...Getting ads info...')
         myAds = self.localBitcoinObject.getSeveralAds([online_buy, online_sell])
         adsKeyboard = self.get_ads_status_keyboard(myAds)
@@ -424,6 +445,9 @@ class TelegramBot:
                                 parse_mode=ParseMode.HTML)
         return TelegramBot.CHANGING_ADS
 
+    """
+    Function for building keyboard with ads info.
+    """
     def get_ads_status_keyboard(self, adsList: list) -> list:
         adVisible = ''
         adType = ''
@@ -434,7 +458,7 @@ class TelegramBot:
             [], #Ad price equation
             [InlineKeyboardButton("Ad Limits", callback_data='callback_NULL')],
             [], #Ad limits
-            [InlineKeyboardButton('⬅ Menu', callback_data='callback_menu')]
+            [InlineKeyboardButton('Menu ⚙', callback_data='callback_menu')]
         ]
         adStatusIndex = 0
         limitButtonIndex = 0
@@ -456,19 +480,18 @@ class TelegramBot:
             keyboard[2].append(thirdRaw)
             minLimit = InlineKeyboardButton(ad['min_amount'],
                                             callback_data=f'callback_ad_changeLimit_min_{ad["ad_id"]}_{limitButtonIndex}')
-            print(
-                "Built this regex:\n" + f'callback_ad_changeLimit_min_{ad["ad_id"]}_{limitButtonIndex}')
             limitButtonIndex += 1
             maxLimit = InlineKeyboardButton(ad['max_amount_available'],
                                             callback_data=f'callback_ad_changeLimit_max_{ad["ad_id"]}_{limitButtonIndex}')
-            print(
-                "Built this regex:\n" + f'callback_ad_changeLimit_max_{ad["ad_id"]}_{limitButtonIndex}')
             limitButtonIndex += 1
             keyboard[4].append(minLimit)
             keyboard[4].append(maxLimit)
             adStatusIndex += 1
         return keyboard
 
+    """
+    Function to answer 'switch ad' button.
+    """
     def ads_switch(self, update: Update, context: CallbackContext) -> int:
         print("Joined switch Ad")
         query = update.callback_query
@@ -494,12 +517,15 @@ class TelegramBot:
             prevMarkup.inline_keyboard[1][index] = InlineKeyboardButton(buttonNewText,
                                                                         callback_data=f'callback_ad_switch_{abs((int(ad_newStatus)) - 1)}_{ad_ID}_{index}')
         else:
-            replyText = '❌ Couldn\'t change ad for some reason!'
+            replyText = '❌ Couldn\'t switch ad for some reason!'
         query.answer()
         replyText += '\n\n' + prevText
         query.edit_message_text(text=replyText, reply_markup=prevMarkup)
         return TelegramBot.CHANGING_ADS
 
+    """
+    Function to catch 'change ad limit' inline button.
+    """
     def change_limit_callback(self, update: Update, context: CallbackContext) -> int:
         query = update.callback_query
         query.answer()
@@ -515,6 +541,9 @@ class TelegramBot:
         self.lastUpdate = update
         return TelegramBot.CHANGING_ADS
 
+    """
+    Function to get new limit from user's input and edit previous keyboard.
+    """
     def get_new_limit_message_callback(self, update: Update, context: CallbackContext) -> int:
         self.menuHandler.states[self.CHANGING_ADS].remove(self.getNewLimitHandler)
         limitBorder = self.lastCallbackQuery.split("_")[3]
@@ -551,6 +580,9 @@ class TelegramBot:
                                 reply_markup=newMarkup)
         return TelegramBot.CHANGING_ADS
 
+    """
+    Function to catch 'Work' button in menu.
+    """
     def command_menu_works(self, update: Update, context: CallbackContext) -> int:
         query = update.callback_query
         query.answer()
@@ -561,7 +593,7 @@ class TelegramBot:
                                   callback_data='callback_works_buy'),
              InlineKeyboardButton(f'Scanning {self.returnStatusTextAndSymbol(self.worksDictionary["scan"]["status"])[1]}',
                                   callback_data='callback_works_scan')],
-            [InlineKeyboardButton('Menu',
+            [InlineKeyboardButton('Menu ⚙',
                                   callback_data='callback_menu_later')]
         ]
         replyMarkup = InlineKeyboardMarkup(keyboard)
@@ -569,27 +601,39 @@ class TelegramBot:
                                 reply_markup=replyMarkup)
         return TelegramBot.CHANGING_WORKS
 
-    def work_sell_options(self, update: Update, context: CallbackContext):
+    """
+    Function to catch inline button for sell work.
+    """
+    def work_sell_options(self, update: Update, context: CallbackContext) -> int:
         query = update.callback_query
         markup = self.works_build_markup('sell')
         query.answer()
         query.edit_message_text(text=f'Sell work control', reply_markup=markup)
         return TelegramBot.CHANGING_WORKS
 
-    def work_buy_options(self, update: Update, context: CallbackContext):
+    """
+    Function to catch inline button for buy work.
+    """
+    def work_buy_options(self, update: Update, context: CallbackContext) -> int:
         query = update.callback_query
         markup = self.works_build_markup('buy')
         query.answer()
         query.edit_message_text(text=f'Buy work control', reply_markup=markup)
         return TelegramBot.CHANGING_WORKS
 
-    def work_scan_options(self, update: Update, context: CallbackContext):
+    """
+    Function to catch inline button for scan work.
+    """
+    def work_scan_options(self, update: Update, context: CallbackContext) -> int:
         query = update.callback_query
         markup = self.works_build_markup('scan')
         query.answer()
         query.edit_message_text(text=f'Scan work control', reply_markup=markup)
         return TelegramBot.CHANGING_WORKS
 
+    """
+    Returns keyboard markup for particular work.
+    """
     def works_build_markup(self, workType: str) -> InlineKeyboardMarkup:
         statusText, statusIcon = self.returnStatusTextAndSymbol(not self.worksDictionary[workType]['status'])
         keyboard = [
@@ -606,9 +650,13 @@ class TelegramBot:
                     buttonsList[0].append(curButton)
                 cardPart += buttonsList
                 keyboard += cardPart
-        keyboard += [[InlineKeyboardButton('Back', callback_data='callback_works')]]
+        keyboard += [[InlineKeyboardButton('Back 🔙', callback_data='callback_works')]]
         return InlineKeyboardMarkup(keyboard)
 
+    """
+    Returns list of buttons which change work's arguments limit.
+    It is contained in sell and buy works markups. 
+    """
     def works_build_numberArg_Part(self, workType: str, minNumThousands: int = 2, maxNumThousands: int = 10) -> list:
         if workType not in ['sell', 'buy']:
             raise ValueError(f"Haven't found worktype type with value {workType}!\nCheck that you gave valid argument!")
@@ -638,18 +686,43 @@ class TelegramBot:
         ]
         return raw
 
+    """
+    Function switches work ON or OFF.
+    Switches only if work can be switched.
+    """
     def work_switch(self, update: Update, context: CallbackContext) -> int:
         query = update.callback_query
         query.answer()
         workType = query.data.split("_")[3]
-        newStatus = not self.worksDictionary[workType]['status']
-        self.worksDictionary[workType]['status'] = newStatus
-        statusText, statusIcon = self.returnStatusTextAndSymbol(not newStatus)
+        replyText = ''
         newMarkup = query.message.reply_markup
-        newMarkup.inline_keyboard[0][0] = InlineKeyboardButton(f'Turn {statusText} {statusIcon}',
-                                                               callback_data=f'callback_works_switch_{workType}')
-        query.edit_message_text(text=f'Switched work status!', reply_markup=newMarkup)
+        if self.work_can_be_switched(workType):
+            newStatus = not self.worksDictionary[workType]['status']
+            self.worksDictionary[workType]['status'] = newStatus
+            statusText, statusIcon = self.returnStatusTextAndSymbol(not newStatus)
+            newMarkup.inline_keyboard[0][0] = InlineKeyboardButton(f'Turn {statusText} {statusIcon}',
+                                                                   callback_data=f'callback_works_switch_{workType}')
+            replyText = f'✅ Switched work status!'
+        else:
+            replyText = f"❌ Couldn't switch work ON!\n" \
+                        f"For <i>sell</i> check that active card and sell border are set (not None). \n" \
+                        f"For <i>buy</i> check that buy difference is set (not None)."
+        query.edit_message_text(text=replyText, reply_markup=newMarkup, parse_mode=ParseMode.HTML)
         return TelegramBot.CHANGING_WORKS
+
+    """
+    Function to switch work. If some arguments of work are not there, you can't switch work on.
+    For sell needed arguments are sell broder and active card.
+    For buy needed argument is buy difference.
+    """
+    def work_can_be_switched(self, worktype: str) -> bool:
+        if worktype == 'sell':
+            if self.worksDictionary['sell']['sellBorder'] is None or self.worksDictionary['sell']['cardOwner'] is None:
+                return False
+        elif worktype == 'buy':
+            if self.worksDictionary['buy']['buyDifference'] is None:
+                return False
+        return True
 
     def change_work_numberArg_fromButton(self, update: Update, context: CallbackContext) -> int:
         query = update.callback_query
@@ -662,21 +735,76 @@ class TelegramBot:
             newMarkup = query.message.reply_markup
             newMarkup.inline_keyboard[2][2] = InlineKeyboardButton(f'{self.worksDictionary[workType][dictKey]}',
                                                                    callback_data=f'callback_work_{workType}_{dictKey}_manual')
-            query.edit_message_text(text='Changed work argument!', reply_markup=newMarkup)
+            query.edit_message_text(text='✅ Changed work argument!', reply_markup=newMarkup)
         else:
-            query.edit_message_text(text=f'Can\'t change work argument because it\'s not given now!',
+            query.edit_message_text(text=f'❌ Can\'t change work argument because it\'s not given now!',
                                     reply_markup=query.message.reply_markup)
         return TelegramBot.CHANGING_WORKS
 
-    def command_menu_balance(update: Update, context: CallbackContext) -> int:
+    def change_work_numberArg_manually(self, update: Update, context: CallbackContext) -> int:
         query = update.callback_query
         query.answer()
+        self.lastCallbackQuery = query.data
+        reply_text = f'📝 Input new argument or choose Cancel:'
         keyboard = [
-            [InlineKeyboardButton('Menu', callback_data='callback_balance')]
+            ['Отмена']
         ]
-        replyMarkup = InlineKeyboardMarkup(keyboard)
-        query.edit_message_text('Your balance is 0.003 BTC!', reply_markup=replyMarkup)
-        return 100
+        replyMarkup = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+        self.menuHandler.states[self.CHANGING_WORKS].append(self.getNewWorkArgumentHandler)
+        self.sendMessageWithConnectionCheck(chat_id=update.effective_chat.id, text=reply_text, reply_markup=replyMarkup)
+        self.lastUpdate = update
+        return TelegramBot.CHANGING_WORKS
+
+    def get_work_numberArg_manually_message(self, update: Update, context: CallbackContext) -> int:
+        self.menuHandler.states[self.CHANGING_WORKS].remove(self.getNewWorkArgumentHandler)
+        replyText = ''
+        msgText = update.message.text
+        if msgText == 'Отмена':
+            replyText = '🔙 Canceled changing work argument!'
+        else:
+            workType = self.lastCallbackQuery.split("_")[2]
+            dictKey = self.lastCallbackQuery.split("_")[3]
+            self.worksDictionary[workType][dictKey] = int(msgText)
+            replyText = f"✅ Successfully changed {workType} argument to {msgText}!"
+            updateToChange = self.lastUpdate.callback_query
+            newMarkup = updateToChange.message.reply_markup
+            newMarkup.inline_keyboard[2][2] = InlineKeyboardButton(msgText, callback_data=self.lastCallbackQuery)
+            updateToChange.edit_message_text(text=replyText, reply_markup=newMarkup)
+        self.sendMessageWithConnectionCheck(chat_id=update.effective_chat.id,
+                                            text=replyText,
+                                            reply_markup=ReplyKeyboardRemove())
+        return TelegramBot.CHANGING_WORKS
+
+    def change_work_activeCard(self, update: Update, context: CallbackContext) -> int:
+        query = update.callback_query
+        query.answer()
+        queryName = query.data.split("_")[3]
+        self.setActiveCardPerson(queryName)
+        buttonsList = []
+        for name in ['Ruslan', 'Mom', 'Ayrat']:
+            curButton = InlineKeyboardButton(
+                f'{name} {self.returnStatusTextAndSymbol(self.worksDictionary["sell"]["cardOwner"]["name"] == name)[1]}',
+                callback_data=f'callback_sell_card_{name}')
+            buttonsList.append(curButton)
+        newMarkup = query.message.reply_markup
+        newMarkup.inline_keyboard[4] = buttonsList
+        query.edit_message_text(text='✅ Changed active card!', reply_markup=newMarkup)
+        return TelegramBot.CHANGING_WORKS
+
+    def command_menu_balance(self, update: Update, context: CallbackContext) -> int:
+        query = update.callback_query
+        query.answer()
+        prevMarkup = query.message.reply_markup
+        query.edit_message_text(text=f"🕒 Getting your balance...")
+        walletInfo = self.localBitcoinObject.getWallet()
+        totalBalance = walletInfo['total']['balance']
+        sendableBalance = walletInfo['total']['sendable']
+        btcAdress = walletInfo['receiving_address']
+        replyText = f"👨‍💻 {myUserName}\nTotal balance: <b>{totalBalance}</b>\n" \
+                    f"Sendable amount: <b>{sendableBalance}</b>\n\n" \
+                    f"Your BTC address: <i>{btcAdress}</i>"
+        query.edit_message_text(text=replyText, reply_markup=prevMarkup, parse_mode=ParseMode.HTML)
+        return TelegramBot.MENU_CHOOSING_OPTION
 
     """
     Get status of main SELL and BUY ads.
@@ -834,14 +962,11 @@ class TelegramBot:
                     self.worksDictionary[workType]['cardOwner']['cardMessage'] = cardMsg
                     reply_text = f"Changed status of SELL work to {statusText}!{statusSymbol}"
                 if cardMsg == 'me':
-                    self.worksDictionary[workType]['cardOwner']['name'] = 'Ruslan'
-                    self.worksDictionary[workType]['cardOwner']['cardMessage'] = ruslanSberCardMessage
+                    self.setActiveCardPerson('Ruslan')
                 elif cardMsg == 'mom':
-                    self.worksDictionary[workType]['cardOwner']['name'] = 'Mom'
-                    self.worksDictionary[workType]['cardOwner']['cardMessage'] = momSberCardMessage
+                    self.setActiveCardPerson('Mom')
                 elif cardMsg == 'ayrat':
-                    self.worksDictionary[workType]['cardOwner']['name'] = 'Ayrat'
-                    self.worksDictionary[workType]['cardOwner']['cardMessage'] = ayratSberCardMessage
+                    self.setActiveCardPerson('Ayrat')
             elif switchStatus is False:
                 if self.worksDictionary[workType]['status'] is False:
                     reply_text = f"SELL work already has status {statusText}!{statusSymbol}"
@@ -985,6 +1110,22 @@ class TelegramBot:
                     filteredAds.append(ad)
                 ind += 1
         return filteredAds
+
+    """
+    Active card name setter
+    """
+    def setActiveCardPerson(self, name: str):
+        if name not in self.CARDNAMES:
+            raise ValueError(f"Name {name} wasn't found in available cards' names!")
+        activeCardMessage = ''
+        if name == 'Ruslan':
+            activeCardMessage = ruslanSberCardMessage
+        elif name == 'Mom':
+            activeCardMessage = momSberCardMessage
+        elif name == 'Ayrat':
+            activeCardMessage = ayratSberCardMessage
+        self.worksDictionary['sell']['cardOwner']['name'] = name
+        self.worksDictionary['sell']['cardOwner']['cardMessage'] = activeCardMessage
 
     """
     Cosmetic helper function returning status 
